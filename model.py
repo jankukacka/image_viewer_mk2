@@ -15,7 +15,6 @@ from queue import Empty
 
 from PIL import ImageTk, Image
 
-from . import cmap2d
 from .ObservableCollections.observablelist import ObservableList
 from .ObservableCollections.observabledict import ObservableDict
 from .ObservableCollections.observable import Observable

@@ -9,7 +9,6 @@
 import numpy as np
 import happy as hp
 from matplotlib.colors import is_color_like, to_hex
-from . import cmap2d
 from . import view as view_
 from .windnd import hook_dropfiles
 
@@ -177,9 +176,20 @@ class Presenter(object):
             ## otherwise the program crashes with:
             ## Fatal Python error: PyEval_RestoreThread: NULL tstate
             filename = files[0].decode()
-            def update_filename():
-                self.model.filename = filename
-            self.view.after(10, update_filename)
+
+            ## If file is json, try loading it as a model
+            if filename.lower().endswith('.json'):
+                def update_model():
+                    try:
+                        self.model.load(hp.io.load(filename))
+                    except Exception as e:
+                        print(e)
+                self.view.after(10, update_model)
+            ## Else try loading it as an image
+            else:
+                def update_filename():
+                    self.model.filename = filename
+                self.view.after(10, update_filename)
 
     def save_render(self, *args):
         filename = self.view.asksaveasfilename(title='Save render as...', filetypes=[('Numpy files', '.npy'), ('PNG', '.png')], initialfile='render.npy')
