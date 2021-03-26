@@ -28,9 +28,16 @@ class Model(Observable):
     def __init__(self):
         Observable.__init__(self)
 
+        ## Setup image rendering process
         self.rendering_queue = Queue()
         self.rendered_queue = Queue()
         self.rendering_process = Process(target=render, args=(self.rendering_queue, self.rendered_queue))
+
+        ## Setup IO process
+        self.io_task_queue = Queue()
+        self.io_response_queue = Queue()
+        self.io_process = Process(target=reader, args=(self.io_task_queue, self.io_response_queue))
+        self.n_io_pending = 0
 
         self._filename = None
         self._image = None
@@ -64,19 +71,26 @@ class Model(Observable):
 
     def __enter__(self):
         self.rendering_process.start()
+        self.io_process.start()
         return self
 
     def __exit__(self, type, value, traceback):
-        ## Send termination signal
+        ## Send termination signals
         self.rendering_queue.put(None)
+        self.io_task_queue.put(None)
 
-        ## Empty the result queue
+        ## Empty the result queues
         render = 1
         while render is not None:
             render = self.rendered_queue.get()
 
-        ## Join the rendering thread
+        io_response = 1
+        while io_response is not None:
+            io_response = self.io_response_queue.get()
+
+        ## Join processes
         self.rendering_process.join()
+        self.io_process.join()
 
     @property
     def filename(self):
@@ -87,8 +101,9 @@ class Model(Observable):
         if val is not self._filename:
             self._filename = val
             self.raiseEvent('propertyChanged', propertyName='filename')
-            image = self.load_image()
-            self.update_image(image)
+            self.load_image()
+            # image =
+            # self.update_image(image)
 
     @property
     def image(self):
@@ -124,22 +139,10 @@ class Model(Observable):
         self.raiseEvent('propertyChanged', propertyName='render')
 
     def load_image(self, event=None):
-        image = hp.io.load(self.filename)
-
-        ## Handle MAT files:
-        try:
-            keys = [k for k in image.keys() if 'rec' in k]
-            if len(keys) == 1:
-                image = image[key]
-            else:
-                print('Could not load image (ambiguous keys)')
-        except Exception:
-            pass
-
-        if image.ndim == 2:
-            image = image[...,None]
-
-        return image
+        task = {'type': 'load_image', 'filename':self.filename}
+        self.io_task_queue.put(task)
+        self.n_io_pending += 1
+        self.raiseEvent('ioTask')
 
     def update_image(self, image):
         '''
@@ -188,6 +191,16 @@ class Model(Observable):
             self.render = render
         except Empty as e:
             pass
+
+    def check_for_io(self):
+        try:
+            response = self.io_response_queue.get_nowait()
+            self.n_io_pending -= 1
+            if response['type'] == 'load_image':
+                self.update_image(response['image'])
+        except Empty as e:
+            pass
+
 
     def update_render(self, event=None):
         ## Check we have all images
@@ -274,7 +287,10 @@ def render(rendering_queue, rendered_queue):
                 kernel_size = (kernel_size[0], kernel_size[0])
 
             norm = ttf.gaussian_blur(img.unsqueeze(0), kernel_size, [k/3 for k in kernel_size]).squeeze(0)
-            cutoff = torch.max(norm) * cutoff_percent / 100
+            # print((np.exp(cutoff_percent/100)-1) / (np.exp(1)-1))
+            # print(np.power(cutoff_percent/100, 3))
+            # cutoff = torch.max(norm) * (np.exp(cutoff_percent/100)-1) / (np.exp(1)-1)
+            cutoff = torch.max(norm) * np.power(cutoff_percent/100, 3)
             norm_img = img / torch.maximum(norm, cutoff)
             norm_img = torch.nan_to_num(norm_img)
 
@@ -348,7 +364,7 @@ def render(rendering_queue, rendered_queue):
                 kernel_size = (kernel_size[0], kernel_size[0])
 
             norm = gaussian_filter(img, [k/3 for k in kernel_size])
-            cutoff = np.max(norm) * cutoff_percent / 100
+            cutoff = np.max(norm) * np.power(cutoff_percent/100, 3)
             norm_img = img / np.maximum(norm, cutoff)
             norm_img = np.nan_to_num(norm_img)
 
@@ -525,6 +541,59 @@ def render(rendering_queue, rendered_queue):
             rendered_queue.put((render, response_images))
         except Exception as e:
             track = traceback.format_exc()
+            print('Error in Rendering Thread:')
             print(track)
     ## Signal finish of the rendered queue before quitting - it needs to be emptied
     rendered_queue.put(None)
+
+
+def reader(input_queue, output_queue):
+    while True:
+        task = input_queue.get()
+
+        ## Termination signal
+        if task is None:
+            # print('Exiting rendering thread')
+            break
+
+        try:
+            response = {'type': task['type']}
+            if task['type'] == 'load_image':
+                filename = task['filename']
+                response['image'] = load_image_internal(filename)
+                # except Exception:
+                #     print('Error loading image')
+                #     response['image'] = None
+
+            output_queue.put(response)
+
+        except Exception as e:
+            track = traceback.format_exc()
+            print('Error in IO Thread:')
+            print(track)
+            response['exception'] = True
+            output_queue.put(response)
+
+
+
+    ## Signal finish of the rendered queue before quitting - it needs to be emptied
+    output_queue.put(None)
+
+
+def load_image_internal(filename):
+    image = hp.io.load(filename)
+
+    ## Handle MAT files:
+    try:
+        keys = [k for k in image.keys() if 'rec' in k]
+        if len(keys) == 1:
+            image = image[key]
+        else:
+            print('Could not load image (ambiguous keys)')
+    except Exception:
+        pass
+
+    if image.ndim == 2:
+        image = image[...,None]
+
+    return image

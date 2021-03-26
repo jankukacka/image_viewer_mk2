@@ -27,6 +27,7 @@ import happy.plots as hpp
 
 from . import skin as skin_
 from .limiter import Limiter
+from .loader_animation import LoaderAnimation
 
 
 def set_state(element, state):
@@ -54,6 +55,9 @@ class View(tk.Tk):
     def __init__(self, skin=None, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
+        self.zoom = 1
+        self.offset = (0,0)
+
         if skin is None:
             skin = skin_.Skin()
         self.skin = skin
@@ -65,6 +69,19 @@ class View(tk.Tk):
         self.setup_response_panel()
         self.setup_imoptions_panel()
         self.setup_model_io()
+
+        self.loader = LoaderAnimation((self.figure_canvas.winfo_width()/2, 1), self.skin.bg_color, self.figure_canvas, self)
+
+        ## -- bind mouse on canvas
+        self.figure_canvas.bind('<Button-1>', self.mouse1_drag)
+        self.figure_canvas.bind('<B1-Motion>', self.mouse1_drag)
+        self.figure_canvas.bind('<Button-3>', self.mouse2_drag)
+        self.figure_canvas.bind('<B3-Motion>', self.mouse2_drag)
+
+        ## -- bind keyboard
+        self.bind('+', lambda _,self=self:self.set_zoom(self.zoom+.5))
+        self.bind('-', lambda _,self=self:self.set_zoom(self.zoom-.25))
+        self.bind('r', self.reset_view)
 
         self.title('Image Viewer MK II')
 
@@ -98,6 +115,15 @@ class View(tk.Tk):
         self.menu['image']['transpose'] = 'Transpose (Ctrl+T)'
         self.menu['image']['obj'].add_command(label=self.menu['image']['transpose'])
         self.menu['obj'].add_cascade(label="Image", menu=self.menu['image']['obj'])
+
+        self.menu['view'] = {'obj': tk.Menu(self.menu['obj'])}
+        self.menu['view']['reset'] = 'Reset (R)'
+        self.menu['view']['obj'].add_command(label=self.menu['view']['reset'], command=self.reset_view)
+        self.menu['view']['zoomin'] = 'Zoom in (+)'
+        self.menu['view']['obj'].add_command(label=self.menu['view']['zoomin'], command=lambda self=self:self.set_zoom(self.zoom+.5))
+        self.menu['view']['zoomout'] = 'Zoom out (-)'
+        self.menu['view']['obj'].add_command(label=self.menu['view']['zoomout'], command=lambda self=self:self.set_zoom(self.zoom-.25))
+        self.menu['obj'].add_cascade(label="View", menu=self.menu['view']['obj'])
 
         tk.Tk.config(self, menu=self.menu['obj'])
 
@@ -376,13 +402,21 @@ class View(tk.Tk):
         return asksaveasfilename_(*args, **kwargs)
 
 
-    def show_image(self, image):
-        self.render_ref = ImageTk.PhotoImage(image=image)
+    def show_image(self, image=None):
+        if image is not None:
+            self.image = image
+
+        if self.zoom != 1:
+            image = self.image.resize((int(self.image.size[0]*self.zoom),
+                                       int(self.image.size[1]*self.zoom)))
+        else:
+            image = self.image
+        self.render_ref = ImageTk.PhotoImage(image)
         # self.figure_canvas.update()
         canvas_width = self.figure_canvas.winfo_width()
         canvas_height = self.figure_canvas.winfo_height()
         # print(canvas_width, canvas_height)
-        self.figure_canvas.create_image((canvas_width/2,canvas_height/2), image=self.render_ref)
+        self.figure_canvas.create_image((canvas_width/2+self.offset[0],canvas_height/2+self.offset[1]), image=self.render_ref)
 
     def show_response(self, response_image):
         if not response_image is None:
@@ -395,3 +429,36 @@ class View(tk.Tk):
 
     def get_active_channel(self):
         return int(self.var_selected_channel.get().split(' ')[-1])
+
+    def mouse1_drag(self, event):
+        '''
+        Changes image offset
+        '''
+        if event.type == tk.EventType.Button:
+            self.offset_root = (event.x, event.y)
+            self.orig_offset = self.offset
+        else:
+            self.offset = (event.x - self.offset_root[0] + self.orig_offset[0],
+                           event.y - self.offset_root[1] + self.orig_offset[1])
+            self.show_image()
+
+    def mouse2_drag(self, event):
+        '''
+        Changes image zoom
+        '''
+        if event.type == tk.EventType.Button:
+            self.orig_zoom = self.zoom
+            self.zoom_root = (event.x, event.y)
+        else:
+            distance = (self.zoom_root[1] - event.y) / 200
+            activation = 1 + max(0, distance) + min(0, distance/2)
+            self.set_zoom(self.orig_zoom * activation)
+
+    def set_zoom(self, zoom):
+        self.zoom = np.maximum(np.minimum(8, zoom),1/2)
+        self.show_image()
+
+    def reset_view(self, *args):
+        self.zoom = 1
+        self.offset = (0,0)
+        self.show_image()

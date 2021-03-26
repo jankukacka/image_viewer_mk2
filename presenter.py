@@ -80,6 +80,7 @@ class Presenter(object):
         self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['load_config'], command=self.load_model)
         self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['transpose'], command=self.model.transpose_image)
 
+        
         ## -- on closing
         # self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -96,11 +97,21 @@ class Presenter(object):
         self.model.check_for_render()
         self.view.after(50, self.check_model_for_render)
 
+    def check_model_for_io(self):
+        self.model.check_for_io()
+        if self.model.n_io_pending > 0:
+            self.view.after(50, self.check_model_for_io)
+        else:
+            self.view.loader.hide()
+
+
     def model_onchange(self, event):
         '''
         Propagates changes in the model to the view.
         '''
-        # print(event)
+        if event.action == 'ioTask':
+            self.view.loader.show()
+            self.check_model_for_io()
         if event.action == 'propertyChanged':
             if event.propertyName == 'colors':
                 channel_index = self.view.get_active_channel()
