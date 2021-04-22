@@ -25,13 +25,13 @@ class Model(Observable):
     Data model object
     '''
 
-    def __init__(self):
+    def __init__(self, use_gpu=True):
         Observable.__init__(self)
 
         ## Setup image rendering process
         self.rendering_queue = Queue()
         self.rendered_queue = Queue()
-        self.rendering_process = Process(target=render, args=(self.rendering_queue, self.rendered_queue))
+        self.rendering_process = Process(target=render, args=(self.rendering_queue, self.rendered_queue, use_gpu))
 
         ## Setup IO process
         self.io_task_queue = Queue()
@@ -254,94 +254,100 @@ class Model(Observable):
         self.image = self.image.transpose(1,0,2)
 
 
-def render(rendering_queue, rendered_queue):
+def render(rendering_queue, rendered_queue, use_gpu):
     '''
     Code for the rendering process
     '''
-    try:
-        import torch
-        import torchvision.transforms.functional as ttf
+    torch = None
+    if use_gpu:
+        try:
+            import torch
+            import torchvision.transforms.functional as ttf
 
-        use_cuda = torch.cuda.is_available()
-        device = torch.device("cuda" if use_cuda else "cpu")
-        torch.set_grad_enabled(False)
+            use_cuda = torch.cuda.is_available()
+            device = torch.device("cuda" if use_cuda else "cpu")
+            torch.set_grad_enabled(False)
 
-        def local_norm(img, kernel_size=31, cutoff_percent=80):
-            '''
-            Performs local normalization of a given image relative to the neighborhood
-            of size (kernel_size, kernel_size)  using a global cutoffself.
+            def local_norm(img, kernel_size=31, cutoff_percent=80):
+                '''
+                Performs local normalization of a given image relative to the neighborhood
+                of size (kernel_size, kernel_size)  using a global cutoffself.
 
-            # Arguments:
-                - img: tensor with the image of shape (channels, height, width)
-                - kernel_size: size of the averaging kernel or tuple of (kernel_height,
-                    kernel_width). Should be odd ints.
-                - cutoff_percentile: int between 0 and 100. Global percentile cut-off,
-                    preventing over-amplification of noise.
+                # Arguments:
+                    - img: tensor with the image of shape (height, width)
+                    - kernel_size: size of the averaging kernel or tuple of (kernel_height,
+                        kernel_width). Should be odd ints.
+                    - cutoff_percentile: int between 0 and 100. Global percentile cut-off,
+                        preventing over-amplification of noise.
 
-            # Returns:
-                - norm_img: image of the same size as the input img, with values locally
-                    normalized.
-            '''
-            kernel_size = hp.misc.ensure_list(kernel_size)
-            if len(kernel_size) == 1:
-                kernel_size = (kernel_size[0], kernel_size[0])
+                # Returns:
+                    - norm_img: image of the same size as the input img, with values locally
+                        normalized.
+                '''
+                kernel_size = hp.misc.ensure_list(kernel_size)
+                if len(kernel_size) == 1:
+                    kernel_size = (kernel_size[0], kernel_size[0])
 
-            norm = ttf.gaussian_blur(img.unsqueeze(0), kernel_size, [k/3 for k in kernel_size]).squeeze(0)
-            # print((np.exp(cutoff_percent/100)-1) / (np.exp(1)-1))
-            # print(np.power(cutoff_percent/100, 3))
-            # cutoff = torch.max(norm) * (np.exp(cutoff_percent/100)-1) / (np.exp(1)-1)
-            cutoff = torch.max(norm) * np.power(cutoff_percent/100, 3)
-            norm_img = img / torch.maximum(norm, cutoff)
-            norm_img = torch.nan_to_num(norm_img)
+                norm = ttf.gaussian_blur(img.unsqueeze(0), kernel_size, [k/3 for k in kernel_size]).squeeze(0)
+                cutoff = torch.max(norm) * np.power(cutoff_percent/100, 3)
+                norm_img = img / torch.maximum(norm, cutoff)
+                norm_img = torch.nan_to_num(norm_img)
 
-            return norm_img
+                img = (img-torch.min(img))/(torch.max(img)-torch.min(img))
+                norm_img = (norm_img-torch.min(norm_img))/(torch.max(norm_img)-torch.min(norm_img))
+                return (img+norm_img)/2
 
-        def sigmoid_norm(a, lower=3, upper=97, new_lower=None, new_upper=None):
-            '''
-            Performs sigmoid normalization of the given image, by scaling the data
-            between given percentiles to range [-1;1], which then sigmoid normalizes to
-            "nearly 0" and "nearly 1". Values outside given percentile are squeezed to
-            the remaining range.
+            def sigmoid_norm(a, lower=3, upper=97, new_lower=None, new_upper=None):
+                '''
+                Performs sigmoid normalization of the given image, by scaling the data
+                between given percentiles to range [-1;1], which then sigmoid normalizes to
+                "nearly 0" and "nearly 1". Values outside given percentile are squeezed to
+                the remaining range.
 
-            # Arguments:
-                - a: array of data to be normalized
-                - lower: percentile between 0 and 100, must be lower than `upper`.
-                - upper: percentile between 0 and 100, must be higher than `lower`.
-                - new_lower: percentile between 0 and 100, where lower will be mapped on
-                    the sigmoid curve
-                - new_upper: percentile between 0 and 100, where upper will be mapped on
-                    the sigmoid curve
+                # Arguments:
+                    - a: array of data to be normalized
+                    - lower: percentile between 0 and 100, must be lower than `upper`.
+                    - upper: percentile between 0 and 100, must be higher than `lower`.
+                    - new_lower: percentile between 0 and 100, where lower will be mapped on
+                        the sigmoid curve
+                    - new_upper: percentile between 0 and 100, where upper will be mapped on
+                        the sigmoid curve
 
-            # Returns:
-                - normalized array.
-                - low, high percentile values
-            '''
-            eps = 1e-8
+                # Returns:
+                    - normalized array.
+                    - low, high percentile values
+                '''
+                eps = 1e-8
 
-            ## Default behavior is like sigmoid_norm_v2
-            if new_lower is None:
-                new_lower = lower
-            if new_upper is None:
-                new_upper = upper
+                ## Default behavior is like sigmoid_norm_v2
+                if new_lower is None:
+                    new_lower = lower
+                if new_upper is None:
+                    new_upper = upper
 
-            # low = torch.quantile(a,lower/100)
-            # high = torch.quantile(a,upper/100)
-            low = lower/100
-            high = upper/100
+                # low = torch.quantile(a,lower/100)
+                # high = torch.quantile(a,upper/100)
+                low = lower/100
+                high = upper/100
 
-            lower = new_lower/100
-            upper = new_upper/100
-            new_low = np.log(eps + lower/(1-lower))  # eps to avoid log(0)
-            new_high = np.log(upper/(1-upper+eps))   # eps to avoid division by 0
-            a = (new_high-new_low) * (a-low)/(high-low+eps) + new_low
-            a = 1/(1+torch.exp(-a))
-            # return (a-a.min()) / (a.max()-a.min()), (low.cpu().numpy(), high.cpu().numpy())
-            return (a-a.min()) / (a.max()-a.min()), (low, high)
+                lower = new_lower/100
+                upper = new_upper/100
+                new_low = np.log(eps + lower/(1-lower))  # eps to avoid log(0)
+                new_high = np.log(upper/(1-upper+eps))   # eps to avoid division by 0
+                a = (new_high-new_low) * (a-low)/(high-low+eps) + new_low
+                a = 1/(1+torch.exp(-a))
+                # return (a-a.min()) / (a.max()-a.min()), (low.cpu().numpy(), high.cpu().numpy())
+                return (a-a.min()) / (a.max()-a.min()), (low, high)
 
-        print('Using GPU acceleration with PyTorch backend:')
-        print('PyTorch', torch.__version__)
-    except ImportError:
-        torch = None
+            print('Using GPU acceleration with PyTorch backend:')
+            print('PyTorch', torch.__version__)
+        except ImportError:
+            print('PyTorch not found! Fallig back to using CPU rendering.')
+
+    if torch is None:
+        print('Using CPU rendering with NumPy backend:')
+        print('NumPy', np.__version__)
+
         def local_norm(img, kernel_size=31, cutoff_percent=80):
             '''
             Performs local normalization of a given image relative to the neighborhood
@@ -368,7 +374,10 @@ def render(rendering_queue, rendered_queue):
             norm_img = img / np.maximum(norm, cutoff)
             norm_img = np.nan_to_num(norm_img)
 
-            return norm_img
+            img = (img-img.min())/img.ptp()
+            norm_img = (norm_img-norm_img.min())/norm_img.ptp()
+
+            return (img+norm_img)/2
 
         def sigmoid_norm(a, lower=3, upper=97, new_lower=None, new_upper=None):
             '''
@@ -399,7 +408,7 @@ def render(rendering_queue, rendered_queue):
                 new_upper = upper
 
             low = lower/100
-            high = lower/100
+            high = upper/100
 
             lower = new_lower/100
             upper = new_upper/100
@@ -409,7 +418,6 @@ def render(rendering_queue, rendered_queue):
             a = 1/(1+np.exp(-a))
             return (a-a.min()) / (a.max()-a.min()), (low, high)
 
-        print('PyTorch not found, using CPU rendering')
 
     image_tensor = None
     image_local = None

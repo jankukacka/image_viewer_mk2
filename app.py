@@ -21,8 +21,12 @@ def main(file=None, image=None, **kwargs):
     images = [None, image2]
     '''
 
+    gpu = True
+    if 'gpu' in kwargs:
+        gpu = kwargs['gpu']
+
     view = view_.View()
-    with model_.Model() as model:
+    with model_.Model(use_gpu=gpu) as model:
         presenter = presenter_.Presenter(view, model)
         if file is None and image is None:
             model.filename = 'image_viewer_mk2/test_data/Study_90_Scan_4_Frame_21_NMF.nrrd'
