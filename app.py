@@ -15,10 +15,6 @@ from . import presenter as presenter_
 def main(file=None, image=None, **kwargs):
     '''
     Starts the app and opens optionally given files or uses given images.
-    If combining files and images, make sure that they occupy different indices
-    in the given lists, and use None to pad overlapping positions, e.g.:
-    files = [filename1, None]
-    images = [None, image2]
     '''
 
     gpu = True
@@ -45,4 +41,4 @@ if __name__ == '__main__':
     files = sys.argv[1:]
     if len(files) == 0:
         files = None
-    main(files)
+    main(files[0])
