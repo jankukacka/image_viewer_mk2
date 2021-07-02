@@ -5,7 +5,7 @@ Simple image viewer
 
 **Non-standard libraries**: happy
 
-**Standard libraries**: PIL, matplotlib, numpy, (optional: PyTorch)
+**Standard libraries**: PIL, matplotlib, numpy, (optional: PyTorch, pywin32)
 
 ## Usage
 
