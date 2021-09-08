@@ -50,4 +50,4 @@ if __name__ == '__main__':
     files = sys.argv[1:]
     if len(files) == 0:
         files = None
-    main(files)
+    main(files[0])
