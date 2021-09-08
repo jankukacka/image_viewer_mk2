@@ -184,7 +184,9 @@ class View(tk.Tk):
         #
         ttk.Entry(grid, textvariable=self.var_channel['color'], width=10).pack(side=tk.LEFT, padx=5)
         path = Path(os.path.dirname(os.path.abspath(__file__)))
+        # print(str(path/'colorpicker16.png'))
         colorpicker = tk.PhotoImage(file=str(path/'colorpicker16.png'))
+        # print(colorpicker)
         btn = tk.Button(grid, image=colorpicker)
         btn.image = colorpicker
         btn.pack(side=tk.LEFT)

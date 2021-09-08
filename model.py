@@ -343,6 +343,7 @@ def render(rendering_queue, rendered_queue, use_gpu):
             print('PyTorch', torch.__version__)
         except ImportError:
             print('PyTorch not found! Fallig back to using CPU rendering.')
+            torch = None
 
     if torch is None:
         print('Using CPU rendering with NumPy backend:')

@@ -19,6 +19,9 @@ def main(file=None, image=None, **kwargs):
     in the given lists, and use None to pad overlapping positions, e.g.:
     files = [filename1, None]
     images = [None, image2]
+
+    # Returns
+    - rendered image as numpy array (height, width, RGBA)
     '''
 
     gpu = True
@@ -28,8 +31,8 @@ def main(file=None, image=None, **kwargs):
     view = view_.View()
     with model_.Model(use_gpu=gpu) as model:
         presenter = presenter_.Presenter(view, model)
-        if file is None and image is None:
-            model.filename = 'image_viewer_mk2/test_data/Study_90_Scan_4_Frame_21_NMF.nrrd'
+        # if file is None and image is None:
+        #     model.filename = 'image_viewer_mk2/test_data/Study_90_Scan_4_Frame_21_NMF.nrrd'
 
         if file is not None:
             model.filename = file
@@ -39,6 +42,8 @@ def main(file=None, image=None, **kwargs):
 
 
         presenter.mainloop()
+        result = np.array(model.render)
+    return result
 
 if __name__ == '__main__':
     import sys
