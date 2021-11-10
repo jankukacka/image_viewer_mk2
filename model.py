@@ -15,10 +15,16 @@ from queue import Empty
 
 from PIL import ImageTk, Image
 
-from .ObservableCollections.observablelist import ObservableList
-from .ObservableCollections.observabledict import ObservableDict
-from .ObservableCollections.observable import Observable
-from .ObservableCollections.event import Event
+try:
+    from .ObservableCollections.observablelist import ObservableList
+    from .ObservableCollections.observabledict import ObservableDict
+    from .ObservableCollections.observable import Observable
+    from .ObservableCollections.event import Event
+except ImportError:
+    from ObservableCollections.observablelist import ObservableList
+    from ObservableCollections.observabledict import ObservableDict
+    from ObservableCollections.observable import Observable
+    from ObservableCollections.event import Event
 
 class Model(Observable):
     '''

@@ -25,10 +25,14 @@ from tkinter.filedialog import asksaveasfilename as asksaveasfilename_
 import happy as hp
 import happy.plots as hpp
 
-from . import skin as skin_
-from .limiter import Limiter
-from .loader_animation import LoaderAnimation
-
+try:
+    from . import skin as skin_
+    from .limiter import Limiter
+    from .loader_animation import LoaderAnimation
+except ImportError:
+    import skin as skin_
+    from limiter import Limiter
+    from loader_animation import LoaderAnimation
 
 def set_state(element, state):
     try:

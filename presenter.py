@@ -9,8 +9,13 @@
 import numpy as np
 import happy as hp
 from matplotlib.colors import is_color_like, to_hex
-from . import view as view_
-from .windnd import hook_dropfiles
+
+try:
+    from . import view as view_
+    from .windnd import hook_dropfiles
+except ImportError:
+    import view as view_
+    from windnd import hook_dropfiles
 
 class Presenter(object):
     '''
@@ -80,7 +85,7 @@ class Presenter(object):
         self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['load_config'], command=self.load_model)
         self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['transpose'], command=self.model.transpose_image)
 
-        
+
         ## -- on closing
         # self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
