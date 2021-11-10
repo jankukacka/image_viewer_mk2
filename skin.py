@@ -19,6 +19,7 @@ class Skin(object):
         '''
 
         self.bg_color = '#444444'
+        self.bg_highlight_color = '#666666'
         self.fg_color = '#FFFFFF'
         self.font_heading = tkFont.Font(family='ansi', size=9, weight=tkFont.BOLD)
 
@@ -27,3 +28,4 @@ class Skin(object):
         ttk.Style().configure("TRadiobutton", background=self.bg_color, foreground=self.fg_color)
         ttk.Style().configure("TScale", background=self.bg_color, foreground=self.fg_color)
         ttk.Style().configure("TCheckbutton", background=self.bg_color, foreground=self.fg_color)
+        ttk.Style().configure("Highlight.TCheckbutton", background=self.bg_highlight_color)

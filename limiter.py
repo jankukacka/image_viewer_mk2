@@ -3,7 +3,7 @@
 #  Author: Jan Kukacka
 #  Date: 3/2019
 # ------------------------------------------------------------------------------
-#  A simple tool for inspecting spectral images
+#  Widget for scaler with limits and step size
 #  Code from https://stackoverflow.com/a/54318377/2042751
 # ------------------------------------------------------------------------------
 

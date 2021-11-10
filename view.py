@@ -29,10 +29,17 @@ try:
     from . import skin as skin_
     from .limiter import Limiter
     from .loader_animation import LoaderAnimation
+    from .channels_list import ChannelsList
+    from .about import WindowAbout
+    from .tk_call_wrapper import CallWrapper
 except ImportError:
     import skin as skin_
     from limiter import Limiter
     from loader_animation import LoaderAnimation
+    from channels_list import ChannelsList
+    from about import WindowAbout
+    from tk_call_wrapper import CallWrapper
+
 
 def set_state(element, state):
     try:
@@ -56,7 +63,7 @@ class View(tk.Tk):
     Main window view class
     '''
 
-    def __init__(self, skin=None, *args, **kwargs):
+    def __init__(self, skin=None, debug=None, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
         self.zoom = 1
@@ -66,12 +73,20 @@ class View(tk.Tk):
             skin = skin_.Skin()
         self.skin = skin
 
+        if debug is None:
+            debug = False
+        if not debug:
+            tk.CallWrapper = CallWrapper
+
+        self.window_about = None
+
         self.setup_mainframe()
         self.setup_menu()
         self.setup_image_axis()
-        self.setup_channels_panel()
         self.setup_response_panel()
-        self.setup_imoptions_panel()
+        self.setup_channels_panel()
+        self.setup_channels2_panel()
+        # self.setup_imoptions_panel()
         self.setup_model_io()
 
         self.loader = LoaderAnimation((self.figure_canvas.winfo_width()/2, 1), self.skin.bg_color, self.figure_canvas, self)
@@ -88,6 +103,8 @@ class View(tk.Tk):
         self.bind('r', self.reset_view)
 
         self.title('Image Viewer MK II')
+        path = Path(os.path.dirname(os.path.abspath(__file__)))
+        self.iconbitmap(True, str(path/'resources'/'favicon.ico'))
 
 
     def setup_mainframe(self):
@@ -118,6 +135,8 @@ class View(tk.Tk):
         self.menu['image'] = {'obj': tk.Menu(self.menu['obj'])}
         self.menu['image']['transpose'] = 'Transpose (Ctrl+T)'
         self.menu['image']['obj'].add_command(label=self.menu['image']['transpose'])
+        self.menu['image']['autocolor'] = 'Default palette'
+        self.menu['image']['obj'].add_command(label=self.menu['image']['autocolor'])
         self.menu['obj'].add_cascade(label="Image", menu=self.menu['image']['obj'])
 
         self.menu['view'] = {'obj': tk.Menu(self.menu['obj'])}
@@ -128,6 +147,9 @@ class View(tk.Tk):
         self.menu['view']['zoomout'] = 'Zoom out (-)'
         self.menu['view']['obj'].add_command(label=self.menu['view']['zoomout'], command=lambda self=self:self.set_zoom(self.zoom-.25))
         self.menu['obj'].add_cascade(label="View", menu=self.menu['view']['obj'])
+
+        self.menu['about'] = 'About'
+        self.menu['obj'].add_command(label=self.menu['about'], command=self.open_about)
 
         tk.Tk.config(self, menu=self.menu['obj'])
 
@@ -155,7 +177,7 @@ class View(tk.Tk):
             'visible': tk.BooleanVar(value=True)
         }
 
-        channel_frame = ttk.LabelFrame(self.grid_frames[1], text='Channels', padding=5)
+        channel_frame = ttk.LabelFrame(self.grid_frames[2], text='Channel settings', padding=5)
         channel_frame.pack(side=tk.TOP, expand=False, fill=tk.BOTH, padx=5, pady=5)
 
         self.var_selected_channel = tk.StringVar(value='Channel 0')
@@ -163,20 +185,20 @@ class View(tk.Tk):
                              textvariable=self.var_selected_channel)
         self.channel_combo.pack(side=tk.TOP, expand=False, fill=tk.X)
 
-        vis_frame = tk.Frame(channel_frame, bg=self.skin.bg_color)
-        vis_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=0)
-
-
-        ttk.Checkbutton(vis_frame, text='Visible', variable=self.var_channel['visible'],
-                        onvalue=True, offvalue=False).pack(side=tk.LEFT, expand=False)
-
-        self.btn_show_all = ttk.Button(vis_frame, text='Show all')
-        self.btn_show_all.pack(side=tk.RIGHT, expand=False, pady=5)
-        self.btn_hide_all = ttk.Button(vis_frame, text='Hide all')
-        self.btn_hide_all.pack(side=tk.RIGHT, expand=False, padx=5, pady=5)
+        # vis_frame = tk.Frame(channel_frame, bg=self.skin.bg_color)
+        # vis_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=0)
+        #
+        #
+        # ttk.Checkbutton(vis_frame, text='Visible', variable=self.var_channel['visible'],
+        #                 onvalue=True, offvalue=False).pack(side=tk.LEFT, expand=False)
+        #
+        # self.btn_show_all = ttk.Button(vis_frame, text='Show all')
+        # self.btn_show_all.pack(side=tk.RIGHT, expand=False, pady=5)
+        # self.btn_hide_all = ttk.Button(vis_frame, text='Hide all')
+        # self.btn_hide_all.pack(side=tk.RIGHT, expand=False, padx=5, pady=5)
 
         color_frame = tk.Frame(channel_frame, bg=self.skin.bg_color)
-        color_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=0)
+        color_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=5)
         # label = tk.Label(color_frame, text='Color', fg=self.skin.fg_color,
         #                  bg=self.skin.bg_color, anchor=tk.NW)
         # label.pack(side=tk.TOP, expand=False, fill=tk.X)
@@ -184,18 +206,23 @@ class View(tk.Tk):
         grid.pack(side=tk.TOP, expand=True, fill=tk.X)
         self.color_preview = tk.Frame(grid, width=16, height=16, bg=self.var_channel['color'].get())
         self.color_preview.pack(side=tk.LEFT)
-        #     # variable.trace("w", lambda _1,_2,_3, obj=preview, var=variable: update_bkg(obj,var) )
-        #
+
         ttk.Entry(grid, textvariable=self.var_channel['color'], width=10).pack(side=tk.LEFT, padx=5)
         path = Path(os.path.dirname(os.path.abspath(__file__)))
-        # print(str(path/'colorpicker16.png'))
-        colorpicker = tk.PhotoImage(file=str(path/'colorpicker16.png'))
-        # print(colorpicker)
-        btn = tk.Button(grid, image=colorpicker)
-        btn.image = colorpicker
-        btn.pack(side=tk.LEFT)
-        self.color_picker = btn
+        colorpicker = tk.PhotoImage(file=str(path/'resources'/'colorpicker16.png'))
+        self.color_picker = ttk.Button(grid, image=colorpicker)
+        self.color_picker.image = colorpicker
+        self.color_picker.pack(side=tk.LEFT)
 
+        icon = tk.PhotoImage(file=str(path/'resources'/'paste16.png'))
+        self.btn_paste = ttk.Button(grid, image=icon)
+        self.btn_paste.image = icon
+        self.btn_paste.pack(side=tk.RIGHT, padx=3)
+
+        icon = tk.PhotoImage(file=str(path/'resources'/'copy16.png'))
+        self.btn_copy = ttk.Button(grid, image=icon)
+        self.btn_copy.image = icon
+        self.btn_copy.pack(side=tk.RIGHT)
 
         def setup_slider(parent_frame, title, variable, limit_low, limit_high, resolution):
             slider_frame = tk.Frame(parent_frame, bg=self.skin.bg_color)
@@ -264,6 +291,10 @@ class View(tk.Tk):
             # canvas = FigureCanvasTkAgg(figure, channel_frame)
             # canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
             # self.channel_figures[channel_index] = (axis, canvas, [[],None])
+
+
+    def setup_channels2_panel(self):
+        self.channels_panel = ChannelsList(self.grid_frames[1],self.skin, self.var_selected_channel)
 
 
     def setup_response_panel(self):
@@ -430,11 +461,16 @@ class View(tk.Tk):
             self.response_canvas.create_image((0,0), image=self.response_ref,anchor=tk.NW)
 
 
-    def update_channels(self, n_channels):
-        self.channel_combo.configure(values=[f'Channel {n}' for n in range(n_channels)])
+    def update_channels(self, channel_props):
+        self.channel_combo.configure(values=[cp['name'] for cp in channel_props])
+        self.channels_panel.recreate_items(channel_props)
 
     def get_active_channel(self):
-        return int(self.var_selected_channel.get().split(' ')[-1])
+        channel_names = [vc['name'].get() for vc in self.channels_panel.var_channels]
+        if self.var_selected_channel.get() in channel_names:
+            return channel_names.index(self.var_selected_channel.get())
+        else:
+            return -1
 
     def mouse1_drag(self, event):
         '''
@@ -468,3 +504,8 @@ class View(tk.Tk):
         self.zoom = 1
         self.offset = (0,0)
         self.show_image()
+
+    def open_about(self):
+        if self.window_about is None:
+            self.window_about = WindowAbout(self, self.skin)
+            self.window_about.deiconify()

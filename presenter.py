@@ -55,7 +55,6 @@ class Presenter(object):
 
         ## -- channel property changes
         self.view.var_selected_channel.trace('w', lambda _1,_2,_3, self=self: self.channel_onchange())
-        # for index, channel_vars in enumerate(self.view.var_channel):
         for key,var in self.view.var_channel.items():
             var.trace('w', lambda _1,_2,_3,var=var,key=key: self.channel_var_onchange(var,key))
 
@@ -64,13 +63,17 @@ class Presenter(object):
         #     var.trace('w', lambda _1,_2,_3,var=var,key=key: self.imoption_var_onchange(var,key))
 
         ## -- channel control buttons
-        self.view.btn_hide_all.config(command=self.hide_all)
-        self.view.btn_show_all.config(command=self.show_all)
+        self.view.channels_panel.btn_hide_all.config(command=self.hide_all)
+        self.view.channels_panel.btn_show_all.config(command=self.show_all)
 
         ## -- config saving and loading
         self.view.btn_save.config(command=self.save_model)
         self.view.btn_load.config(command=self.load_model)
         self.view.btn_save_render.config(command=self.save_render)
+
+        ## -- config copying and pasting
+        self.view.btn_paste.config(command=lambda: self.model.paste_params(self.view.get_active_channel()))
+        self.view.btn_copy.config(command=lambda: self.model.copy_params(self.view.get_active_channel()))
 
         ## -- clipboard
         self.view.bind('<Control-c>', self.render_to_clipboard)
@@ -84,6 +87,7 @@ class Presenter(object):
         self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['save_config'], command=self.save_model)
         self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['load_config'], command=self.load_model)
         self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['transpose'], command=self.model.transpose_image)
+        self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['autocolor'], command=self.model.autocolor)
 
 
         ## -- on closing
@@ -97,6 +101,17 @@ class Presenter(object):
 
         ## Hook drag'n'drop files
         hook_dropfiles(self.view, self.drag_file)
+
+    def register_channel_panel_handlers(self):
+        ## Register handlers on variables of channels panel
+        for i,var_channel in enumerate(self.view.channels_panel.var_channels):
+            for key,var in var_channel.items():
+                # if key != 'name':  ## Name has a seperate handling mechanism
+                var.trace('w', lambda _1,_2,_3,var=var,key=key,cindex=i: self.channel_var_onchange(var,key,cindex))
+
+        for i, color_preview in enumerate(self.view.channels_panel.color_previews):
+            color_preview.bind('<Double-Button-1>', lambda _, var=self.view.channels_panel.var_channels[i]['color']: self.pick_color(var))
+
 
     def check_model_for_render(self):
         self.model.check_for_render()
@@ -118,35 +133,39 @@ class Presenter(object):
             self.view.loader.show()
             self.check_model_for_io()
         if event.action == 'propertyChanged':
-            if event.propertyName == 'colors':
-                channel_index = self.view.get_active_channel()
-                self.view.var_channel['color'].set(self.model.colors[channel_index])
+            # if event.propertyName == 'colors':
+            #     channel_index = self.view.get_active_channel()
+            #     self.view.var_channel['color'].set(self.model.colors[channel_index])
                 # for var, color in zip(self.view.var_color, self.model.colors):
                 #     var.set(color)
-            if event.propertyName == 'colormap':
-                self.update_colormap()
-            if event.propertyName == 'color_space':
-                self.view.var_colorspace.set(self.model.color_space)
-            if event.propertyName == 'channel_properties':
-                for i, channel_property in enumerate(self.model.channel_properties):
-                    for key, val in channel_property.items():
-                        self.view.var_channel[i][key].set(val)
-                        if key in self.view.property_frames[i]:
-                            view_.set_state(self.view.property_frames[i][key], 'normal' if val else 'disable')
+            # if event.propertyName == 'colormap':
+            #     self.update_colormap()
+            # if event.propertyName == 'color_space':
+            #     self.view.var_colorspace.set(self.model.color_space)
+            # if event.propertyName == 'channel_properties':
+            #     for i, channel_property in enumerate(self.model.channel_properties):
+            #         for key, val in channel_property.items():
+            #             self.view.var_channel[i][key].set(val)
+            #             if key in self.view.property_frames[i]:
+            #                 view_.set_state(self.view.property_frames[i][key], 'normal' if val else 'disable')
 
             if event.propertyName == 'channel_props':
                 # print(event)
                 if hasattr(event, 'child'):
-                    if event.child.action == 'itemsAdded' or event.child.action == 'itemsAdded':
-                        self.view.update_channels(len(self.model.channel_props))
+                    if event.child.action == 'itemsAdded' or event.child.action == 'itemsRemoved':
+                        self.view.update_channels(self.model.channel_props)
+                        self.register_channel_panel_handlers()
 
+                self.view.channels_panel.update_vars(self.model.channel_props)
                 active_channel = self.view.get_active_channel()
                 if active_channel < len(self.model.channel_props):
-                    channel_property = self.model.channel_props[active_channel]
-                    for key, val in channel_property.items():
-                        self.view.var_channel[key].set(val)
-                        if key in self.view.property_frames:
-                            view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
+                    self.channel_onchange()
+                    # channel_property = self.model.channel_props[active_channel]
+                    # for key, val in channel_property.items():
+                    #     if key in self.view.var_channel:
+                    #         self.view.var_channel[key].set(val)
+                    #     if key in self.view.property_frames:
+                    #         view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
 
             if event.propertyName == 'imoptions':
                 for key, val in self.model.imoptions.items():
@@ -217,12 +236,18 @@ class Presenter(object):
 
     def channel_onchange(self):
         channel_index = self.view.get_active_channel()
+        if channel_index < 0 or channel_index >= len(self.model.channel_props):
+            return
+
         channel_property = self.model.channel_props[channel_index]
 
         for key, val in channel_property.items():
-            self.view.var_channel[key].set(val)
+            if key in self.view.var_channel:
+                self.view.var_channel[key].set(val)
             if key in self.view.property_frames:
                 view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
+
+        self.view.channels_panel.highlight_item(channel_index)
 
     def color_onchage(self):
         channel_index = self.view.get_active_channel()
@@ -234,8 +259,9 @@ class Presenter(object):
     # def colorspace_onchange(self, var):
     #     self.model.color_space = var.get()
 
-    def channel_var_onchange(self, var, key):
-        cindex = self.view.get_active_channel()
+    def channel_var_onchange(self, var, key, cindex=None):
+        if cindex is None:
+            cindex = self.view.get_active_channel()
         self.model.channel_props[cindex][key] = var.get()
 
     def imoption_var_onchange(self, var, key):

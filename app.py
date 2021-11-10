@@ -39,7 +39,7 @@ def main(file=None, image=None, **kwargs):
     - (config dictionary. Only if return_config was set to True.)
     '''
 
-    gpu = True
+    gpu = False
     if 'gpu' in kwargs:
         gpu = kwargs['gpu']
 
@@ -49,11 +49,15 @@ def main(file=None, image=None, **kwargs):
     if 'config' in kwargs:
         config = kwargs['config']
 
+    view_kwargs = {}
+    if 'debug' in kwargs:
+        view_kwargs['debug'] = kwargs['debug']
+
     return_config = False
     if 'return_config' in kwargs:
         return_config = kwargs['return_config']
 
-    view = view_.View()
+    view = view_.View(**view_kwargs)
     with model_.Model(use_gpu=gpu) as model:
         presenter = presenter_.Presenter(view, model)
 

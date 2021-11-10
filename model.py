@@ -9,7 +9,7 @@
 import numpy as np
 import traceback
 import happy as hp
-from matplotlib.colors import PowerNorm
+from matplotlib.colors import PowerNorm, to_hex
 from multiprocessing import Process, Queue
 from queue import Empty
 
@@ -57,7 +57,7 @@ class Model(Observable):
 
         self.channel_props = ObservableList()
         self.channel_props.attach(lambda e, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props', child=e))
-
+        self.channel_prop_clipboard = None
 
         imoptions = {
             'use_unsharp_mask': True,
@@ -171,6 +171,7 @@ class Model(Observable):
 
         for channel in range(n_channels):
             channel_property = {}
+            channel_property['name'] = f'Channel {channel}'
             channel_property['use_local_contrast'] = True
             channel_property['local_contrast_neighborhood'] = 31
             channel_property['local_contrast_cut_off'] = 80
@@ -258,6 +259,20 @@ class Model(Observable):
 
     def transpose_image(self):
         self.image = self.image.transpose(1,0,2)
+
+    def autocolor(self):
+        for i, channel_prop in enumerate(self.channel_props):
+            channel_prop['color'] = str(to_hex(f'C{i%10}'))
+
+    def copy_params(self, channel_index):
+        self.channel_prop_clipboard = dict(self.channel_props[channel_index])
+
+    def paste_params(self, channel_index):
+        if self.channel_prop_clipboard is None:
+            return
+        for key, value in self.channel_prop_clipboard.items():
+            if key not in ['name', 'color', 'visible']:
+                self.channel_props[channel_index][key] = value
 
 
 def render(rendering_queue, rendered_queue, use_gpu):
