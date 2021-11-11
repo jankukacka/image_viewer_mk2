@@ -230,29 +230,21 @@ class Model(Observable):
 
     def save(self):
         model_dict = {}
-        # model_dict['colors'] = list(self.colors)
-        # model_dict['color_space'] = self.color_space
-        # model_dict['imoptions'] = dict(self.imoptions)
         model_dict['channel_props'] = [dict(cp) for cp in self.channel_props]
-        # model_dict['special_options'] = dict(self.special_options)
         return model_dict
 
     def load(self, model_dict):
         ## Suspend rendering while loading
         self.suspend_render = True
 
-        # for i, color in enumerate(model_dict['colors']):
-        #     self.colors[i] = color
-        # self.color_space = model_dict['color_space']
-        # for key, value in model_dict['imoptions'].items():
-        #     self.imoptions[key] = value
         for i, channel_property in enumerate(model_dict['channel_props']):
             if i >= len(self.channel_props):
                 break
             for key, value in channel_property.items():
-                self.channel_props[i][key] = value
-        # if 'special_options' in model_dict:
-        #     self.special_options = model_dict['special_options']
+                if key in self.channel_props[i]:
+                    self.channel_props[i][key] = value
+                else:
+                    print(f'Config key {key} could not be loaded.')
 
         self.suspend_render = False
         self.update_render()

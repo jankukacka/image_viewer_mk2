@@ -256,9 +256,6 @@ class Presenter(object):
         if is_color_like(color) and channel_index < len(self.model.channel_props):
             self.model.channel_props[channel_index]['color'] = str(to_hex(color))
 
-    # def colorspace_onchange(self, var):
-    #     self.model.color_space = var.get()
-
     def channel_var_onchange(self, var, key, cindex=None):
         if cindex is None:
             cindex = self.view.get_active_channel()

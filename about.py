@@ -51,7 +51,7 @@ class WindowAbout(tk.Toplevel):
         frame = tk.Frame(frame, bg='#ff0000')
         frame.pack(side=tk.TOP, expand=True, fill=tk.X, padx=10)
         tk.Label(frame, text='Image Viewer MK2', fg=self.skin.fg_color, bg=self.skin.bg_color, font=('Segoe UI', 14, 'bold')).pack(side=tk.TOP, expand=False, fill=tk.X)
-        tk.Label(frame, text='v0.2.0 (2021-11-10)', fg=self.skin.fg_color, bg=self.skin.bg_color).pack(side=tk.TOP, expand=False, fill=tk.X)
+        tk.Label(frame, text='v0.2.1 (2021-11-11)', fg=self.skin.fg_color, bg=self.skin.bg_color).pack(side=tk.TOP, expand=False, fill=tk.X)
         tk.Label(frame, text='Author: Jan Kukačka, 2021', fg=self.skin.fg_color, bg=self.skin.bg_color).pack(side=tk.TOP, expand=False, fill=tk.X)
         tk.Label(frame, text='Provided under MIT license.', fg=self.skin.fg_color, bg=self.skin.bg_color).pack(side=tk.TOP, expand=False, fill=tk.X)
         tk.Label(frame, text='Icon credits: Icon home, Gregor Cresnar,\nFreepik and Pancracysdh.', fg=self.skin.fg_color, bg=self.skin.bg_color).pack(side=tk.TOP, expand=False, fill=tk.X)

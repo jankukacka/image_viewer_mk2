@@ -24,4 +24,9 @@ class CallWrapper:
             raise SystemExit(msg)
 
         except tk.TclError as err:
+            ## Raised when numbers from textboxes cannot be parsed
+            pass
+
+        except ValueError as err:
+            ## Raised when colors from textboxes cannot be parsed
             pass
