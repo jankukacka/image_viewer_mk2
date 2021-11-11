@@ -8,7 +8,6 @@
 # ------------------------------------------------------------------------------
 
 import numpy as np
-import argparse
 try:
     from . import view as view_
     from . import model as model_
@@ -19,18 +18,7 @@ except ImportError:
     import presenter as presenter_
 
 
-# argument parsing
-parser = argparse.ArgumentParser(description='Image Viewer MKII: Spectral image viewer')
-parser.add_argument('-i', '--input', type=str, help='Filename of the image to open', default=argparse.SUPPRESS)
-parser.add_argument('-c', '--config', type=str, help='Filename of the config file to import', default=argparse.SUPPRESS)
-
-parser.add_argument('-d', '--debug', help='Print errors to console.', action='store_true', default=argparse.SUPPRESS)
-parser.add_argument('-g', '--gpu', help='Use GPU rendering (default)', action='store_true', default=argparse.SUPPRESS)
-parser.add_argument('-ng', '--no_gpu', help='Use CPU rendering', action='store_true', default=argparse.SUPPRESS)
-
-
-
-def main(file=None, image=None, **kwargs):
+def start(file=None, image=None, **kwargs):
     '''
     Starts the app and opens optionally given file or uses given image.
 
@@ -90,22 +78,3 @@ def main(file=None, image=None, **kwargs):
         return result, config
     else:
         return result
-
-if __name__ == '__main__':
-    import sys
-    kwargs = vars(parser.parse_args(sys.argv[1:]))
-    kwargs2 = {}
-
-    if 'no_gpu' in kwargs:
-        kwargs2['gpu'] = not kwargs['no_gpu']
-    if 'gpu' in kwargs:
-        kwargs2['gpu'] = kwargs['gpu']
-    if 'input' in kwargs:
-        kwargs2['file'] = kwargs['input']
-    if 'config' in kwargs:
-        kwargs2['config_filename'] = kwargs['config']
-    if 'debug' in kwargs:
-        kwargs2['debug'] = kwargs['debug']
-
-    print('Image Viewer MKII. Jan Kukacka, 2021')
-    main(**kwargs2)

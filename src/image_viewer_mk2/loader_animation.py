@@ -22,7 +22,7 @@ class LoaderAnimation(object):
         self.tk_canvas = tk_canvas
         self.tk = tk
 
-        path = Path(os.path.dirname(os.path.abspath(__file__))) / 'loader.gif'
+        path = Path(os.path.dirname(os.path.abspath(__file__))) / 'resources' / 'loader.gif'
         img = Image.open(path)
 
         self.prepare_frames(img)

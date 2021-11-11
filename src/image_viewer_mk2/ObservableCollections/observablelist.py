@@ -1,3 +1,11 @@
+# ------------------------------------------------------------------------------
+#  File: observablelist.py
+#  Author: Remi Emonet
+#  Date: 8/2019
+#  Source: https://github.com/twitwi/vuejs-python/tree/master/vuejspython/observablecollections
+#  License: MIT
+# ------------------------------------------------------------------------------
+
 from .observable import Observable
 
 class ObservableList(list, Observable):
