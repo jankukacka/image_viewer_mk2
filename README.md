@@ -24,7 +24,7 @@ render = imv.start(image=img)
 
 **From command line as a standalone application.**
 ```
-> imvmk2 [-i filename] [-c config_filename] [--gpu | --no_gpu] [--debug]
+> imvmk2 [-i filename] [-c config_filename] [-g (GPU) | -ng (No GPU)] [-d (debug)]
 ```
 
 ## Credits
