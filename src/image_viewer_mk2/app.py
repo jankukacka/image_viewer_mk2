@@ -64,6 +64,8 @@ def start(file=None, image=None, **kwargs):
 
         if image is not None:
             model.update_image(image)
+            if config is not None:
+                model.load(config)
 
         if file is not None:
             model.filename = file

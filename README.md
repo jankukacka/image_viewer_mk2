@@ -28,7 +28,7 @@ render = imv.start(image=img)
 ```
 
 ## Credits
-This software reuses code and icons produced by: cilame, Benjamin Johnson, Remin Emonet, Icon home, Gregor Cresnar, Freepik, Google, and Pancracysdh
+This software reuses code and icons produced by: cilame, Benjamin Johnson, Remin Emonet, Icon home, Gregor Cresnar, Freepik, Google, Uptal Barman and Pancracysdh
 
 ## License
 
@@ -37,5 +37,5 @@ The software is provided under the [MIT open license](LICENSE.txt).
 ## Citation
 If you use this software for your research, please cite it as:
 ```
-Kukačka, Jan (2021). Image Viewer MK2 (v0.2.1) [Computer software]. https://github.com/jankukacka/image_viewer_mk2
+Kukačka, Jan (2021). Image Viewer MK2 (v0.2.3) [Computer software]. https://github.com/jankukacka/image_viewer_mk2
 ```
