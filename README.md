@@ -27,6 +27,13 @@ render = imv.start(image=img)
 > imvmk2 [-i filename] [-c config_filename] [-g (GPU) | -ng (No GPU)] [-d (debug)]
 ```
 
+## Troubleshooting
+
+```
+TclError: image "pyimageXX" doesn't exist
+```
+When using in interactive session, all other matplotlib figures have to be closed.
+
 ## Credits
 This software reuses code and icons produced by: cilame, Benjamin Johnson, Remin Emonet, Icon home, Gregor Cresnar, Freepik, Google, Uptal Barman and Pancracysdh
 
