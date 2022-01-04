@@ -27,6 +27,13 @@ render = imv.start(image=img)
 > imvmk2 [-i filename] [-c config_filename] [-g (GPU) | -ng (No GPU)] [-d (debug)]
 ```
 
+## Troubleshooting
+
+```
+TclError: image "pyimageXX" doesn't exist
+```
+When using in interactive session, all other matplotlib figures have to be closed.
+
 ## Credits
 This software reuses code and icons produced by: cilame, Benjamin Johnson, Remin Emonet, Icon home, Gregor Cresnar, Freepik, Google, and Pancracysdh
 
@@ -37,5 +44,5 @@ The software is provided under the [MIT open license](LICENSE.txt).
 ## Citation
 If you use this software for your research, please cite it as:
 ```
-Kukačka, Jan (2021). Image Viewer MK2 (v0.2.1) [Computer software]. https://github.com/jankukacka/image_viewer_mk2
+Kukačka, Jan (2021). Image Viewer MK2 (v0.2.3) [Computer software]. https://github.com/jankukacka/image_viewer_mk2
 ```
