@@ -14,7 +14,12 @@ Additional dependencies must be installed separately: `happy` (currently not pub
 
 ## Usage
 
-**From within python scripts and interactive sessions.** Image viewer returns the rendered image back so that it can be further used inside the script.
+**From command line as a standalone application.**
+```
+> imvmk2 [-i filename] [-c config_filename] [-g (GPU) | -ng (No GPU)] [-d (debug)]
+```
+
+**From within python scripts and interactive sessions.** The viewer can be either used as an interactive image viewer, giving the user the ability to manually adjust the settings. The rendered image is returned back so that it can be further used inside the script.
 ```
 import image_viewer_mk2.app as imv
 
@@ -22,10 +27,16 @@ img = np.zeros((height, width, channels))
 render = imv.start(image=img)
 ```
 
-**From command line as a standalone application.**
+Alternatively, it can be used to apply existing configuration and directly return a rendered image without opening the interactive GUI:
 ```
-> imvmk2 [-i filename] [-c config_filename] [-g (GPU) | -ng (No GPU)] [-d (debug)]
+import image_viewer_mk2.app as imv
+
+img = np.zeros((height, width, channels))
+render = imv.render(image=img, config_filename='config.json')
 ```
+
+Configuration files can be saved from the interactive GUI or they can be returned as a second return value in the script by passing parameter `return_config=True` to the call `imv.start()`.
+
 
 ## Troubleshooting
 
@@ -44,5 +55,5 @@ The software is provided under the [MIT open license](LICENSE.txt).
 ## Citation
 If you use this software for your research, please cite it as:
 ```
-Kukačka, Jan (2021). Image Viewer MK2 (v0.2.3) [Computer software]. https://github.com/jankukacka/image_viewer_mk2
+Kukačka, Jan (2021). Image Viewer MK2 (v0.2.4) [Computer software]. https://github.com/jankukacka/image_viewer_mk2
 ```

@@ -86,3 +86,59 @@ def start(file=None, image=None, **kwargs):
         return result, config
     else:
         return result
+
+
+def render(file=None, image=None, **kwargs):
+    '''
+    Renders given file or given image using given config.
+
+    # Arguments:
+    - config_filename: Filename of the config to apply.
+    - config: Dictionary with config to apply.
+    - file: Optional. Filename to open
+    - image: Optional. Alternatively, an opened image can be passed as an array
+        of shape (height, width, n_channels)
+
+    # Additional optional kwargs:
+    - gpu: bool. If True, PyTorch+GPU based rendering will be used (if
+        installed). If False (default), defaults to NumPy+CPU rendering
+    - return_config: bool. If True, returns also the config dict. False by default.
+
+    # Returns
+    - rendered image as numpy array (height, width, RGBA)
+    '''
+
+    model_kwargs = {'use_gpu': False, 'drop_tasks': False}
+    if 'gpu' in kwargs:
+        model_kwargs['use_gpu'] = kwargs['gpu']
+
+    config = None
+    if 'config_filename' in kwargs:
+        config = hp.io.load(kwargs['config_filename'])
+    if 'config' in kwargs:
+        config = kwargs['config']
+
+    view_kwargs = {}
+    if 'debug' in kwargs:
+        view_kwargs['debug'] = kwargs['debug']
+        model_kwargs['debug'] = kwargs['debug']
+
+    with model_.Model(**model_kwargs) as model:
+        if image is not None:
+            model.update_image(image)
+            if config is not None:
+                model.load(config)
+
+        if file is not None:
+            model.filename = file
+
+            ## Model loading has to wait for image loading io to finish
+            def img_onload(event):
+                if event.action == 'propertyChanged' and event.propertyName == 'render':
+                    if config is not None:
+                        model.load(config)
+            model.attach(img_onload)
+
+    result = np.array(model.render)
+
+    return result

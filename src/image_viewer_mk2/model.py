@@ -33,13 +33,13 @@ class Model(Observable):
     Data model object
     '''
 
-    def __init__(self, use_gpu=True, debug=False):
+    def __init__(self, use_gpu=True, debug=False, drop_tasks=True):
         Observable.__init__(self)
 
         ## Setup image rendering process
         self.rendering_queue = Queue()
         self.rendered_queue = Queue()
-        self.rendering_process = Process(target=render, args=(self.rendering_queue, self.rendered_queue, use_gpu, debug))
+        self.rendering_process = Process(target=render, args=(self.rendering_queue, self.rendered_queue, use_gpu, debug, drop_tasks))
 
         ## Setup IO process
         self.io_task_queue = Queue()
@@ -91,6 +91,8 @@ class Model(Observable):
         render = 1
         while render is not None:
             render = self.rendered_queue.get()
+            if render is not None:
+                self.render = render[0]
 
         io_response = 1
         while io_response is not None:

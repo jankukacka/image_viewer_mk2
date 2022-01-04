@@ -116,7 +116,7 @@ def render_channel_internal(channel_property, image, fx):
     return image, response_image
 
 
-def render(rendering_queue, rendered_queue, use_gpu, debug):
+def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
     '''
     Code for the rendering process
     '''
@@ -296,16 +296,17 @@ def render(rendering_queue, rendered_queue, use_gpu, debug):
             image_local = task['image']
             image_local_changed = True
 
-        try:
-            while True:
-                task = rendering_queue.get(False)
-                # task = rendering_queue.get(True, .05)
-                if task is not None and 'image' in task:
-                    image_local = task['image']
-                    image_local_changed = True
-                # print('Dropping a task')
-        except Empty:
-            pass
+        if drop_tasks:
+            try:
+                while True:
+                    task = rendering_queue.get(False)
+                    # task = rendering_queue.get(True, .05)
+                    if task is not None and 'image' in task:
+                        image_local = task['image']
+                        image_local_changed = True
+                    # print('Dropping a task')
+            except Empty:
+                pass
 
         ## Termination signal
         if task is None:
