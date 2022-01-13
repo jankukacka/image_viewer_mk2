@@ -43,7 +43,7 @@ Configuration files can be saved from the interactive GUI or they can be returne
 ```
 TclError: image "pyimageXX" doesn't exist
 ```
-When using in interactive session, all other matplotlib figures have to be closed.
+When using in interactive session, all other matplotlib figures have to be closed. Calling `matplotlib.pyplot.close(fig='all')` should do the trick.
 
 ## Credits
 This software reuses code and icons produced by: cilame, Benjamin Johnson, Remin Emonet, Icon home, Gregor Cresnar, Freepik, Google, Uptal Barman and Pancracysdh
