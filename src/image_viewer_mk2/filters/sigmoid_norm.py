@@ -33,6 +33,7 @@ class SigmoidNorm(filter.Filter):
             - new_upper: percentile between 0 and 100, where upper will be mapped on
                 the sigmoid curve
         '''
+        super().__init__()
         self.lower = lower
         self.upper = upper
         self.new_lower = new_lower
@@ -46,6 +47,9 @@ class SigmoidNorm(filter.Filter):
         # Returns:
             - normalized array.
         '''
+        if not self.active:
+            return img
+
         eps = 1e-8
 
         low = self.lower/100
@@ -60,11 +64,12 @@ class SigmoidNorm(filter.Filter):
         return (img - img.min()) / img.ptp()
 
     def serialize(self):
-        return {'name': self.name,
-                'params': {'lower': self.lower,
-                           'upper': self.upper,
-                           'new_lower': self.new_lower,
-                           'new_upper': self.new_upper}}
+        base_dict = super().serialize()
+        base_dict['params']['lower'] = self.lower
+        base_dict['params']['upper'] = self.upper
+        base_dict['params']['new_lower'] = self.new_lower
+        base_dict['params']['new_upper'] = self.new_upper
+        return base_dict
 
     @staticmethod
     def deserialize(serialization):
@@ -72,4 +77,6 @@ class SigmoidNorm(filter.Filter):
         upper = serialization['upper']
         new_lower = serialization['new_lower']
         new_upper = serialization['new_upper']
-        return SigmoidNorm(lower, upper, new_lower, new_upper)
+        obj = SigmoidNorm(lower, upper, new_lower, new_upper)
+        obj._deserialize_parent(serialization)
+        return obj

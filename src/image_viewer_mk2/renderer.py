@@ -146,18 +146,19 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
             for channel_index, channel_property in enumerate(task['channel_properties']):
                 ## Ignore hidden channels
                 if not channel_property['visible']:
-                    response_images.append(np.zeros((128,128,3), dtype=np.uint8))
+                    response_images.append(np.zeros((128,256,3), dtype=np.uint8))
                     continue
 
                 image = image_local[...,channel_index]
                 if (channel_index not in pipelines
                     or channel_property['pipeline'] != pipelines[channel_index].serialize()):
-                    if debug: print('Making new pipleine')
                     pipelines[channel_index] = Pipeline.deserialize(channel_property['pipeline'])
 
                 output_image = pipelines[channel_index](image)
 
                 response_image = render_response(image, output_image)
+
+                output_image = hp.plots.cmap('k', channel_property['color'])(output_image)
                 processed_images.append(output_image)
                 response_images.append(response_image)
 
@@ -178,4 +179,4 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
 
 
 def render_response(img1, img2):
-    return np.zeros((128,128,3), dtype=np.uint8)
+    return np.zeros((128,256,3), dtype=np.uint8)

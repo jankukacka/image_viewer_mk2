@@ -226,6 +226,7 @@ class Presenter(object):
                 view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
 
         self.view.channels_panel.highlight_item(channel_index)
+        self.view.pipelines_panel.on_channel_selected_change(channel_index)
 
     def color_onchage(self):
         channel_index = self.view.get_active_channel()

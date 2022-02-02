@@ -12,14 +12,18 @@ class Filter(object):
     '''
 
     def __init__(self):
-        pass
+        self.active = True
 
     def __call__(self, img):
         raise NotImplementedError()
 
     def serialize(self):
-        raise NotImplementedError()
+        return {'name': self.name,
+                'params': {'active': self.active}}
 
     @staticmethod
     def deserialize(serialization):
         raise NotImplementedError()
+
+    def _deserialize_parent(self, serialization):
+        self.active = serialization['active']

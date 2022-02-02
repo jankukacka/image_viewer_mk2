@@ -31,9 +31,9 @@ class LocalNorm(filter.Filter):
             - cutoff_percentile: int between 0 and 100. Global percentile cut-off,
                 preventing over-amplification of noise.
         '''
+        super().__init__()
         self.cutoff_percentile = cutoff_percentile
         self.kernel_size = kernel_size
-        super().__init__()
 
     def __call__(self, img):
         '''
@@ -43,6 +43,8 @@ class LocalNorm(filter.Filter):
             - norm_img: image of the same size as the input img, with values
                 locally normalized.
         '''
+        if not self.active:
+            return img
         kernel_size = hp.misc.ensure_list(self.kernel_size)
         if len(kernel_size) == 1:
             kernel_size = (kernel_size[0], kernel_size[0])
@@ -58,12 +60,15 @@ class LocalNorm(filter.Filter):
         return (img+norm_img)/2
 
     def serialize(self):
-        return {'name': self.name,
-                'params': {'cutoff_percentile': self.cutoff_percentile,
-                           'kernel_size': self.kernel_size}}
+        base_dict = super().serialize()
+        base_dict['params']['cutoff_percentile'] = self.cutoff_percentile
+        base_dict['params']['kernel_size'] = self.kernel_size
+        return base_dict
 
     @staticmethod
     def deserialize(serialization):
         cutoff_percentile = serialization['cutoff_percentile']
         kernel_size = serialization['kernel_size']
-        return LocalNorm(cutoff_percentile, kernel_size)
+        obj = LocalNorm(cutoff_percentile, kernel_size)
+        obj._deserialize_parent(serialization)
+        return obj

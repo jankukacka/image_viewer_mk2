@@ -46,7 +46,7 @@ TclError: image "pyimageXX" doesn't exist
 When using in interactive session, all other matplotlib figures have to be closed.
 
 ## Credits
-This software reuses code and icons produced by: cilame, Benjamin Johnson, Remin Emonet, Icon home, Gregor Cresnar, Freepik, Google, Uptal Barman and Pancracysdh
+This software reuses code and icons produced by: cilame, Benjamin Johnson, Remin Emonet, [Icon home](https://www.flaticon.com/authors/icon-home), [Gregor Cresnar](https://www.flaticon.com/authors/gregor-cresnar), [Freepik](https://www.flaticon.com/authors/Freepik), [Google](https://www.flaticon.com/authors/google), Uptal Barman, [Arkinasi](https://www.flaticon.com/authors/arkinasi), [Royyan Wijaya](https://www.flaticon.com/authors/royyan-wijaya), and Pancracysdh.
 
 ## License
 

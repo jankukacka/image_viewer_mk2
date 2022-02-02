@@ -20,6 +20,7 @@ try:
     from .ObservableCollections.observabledict import ObservableDict
     from .ObservableCollections.observable import Observable
     from .ObservableCollections.event import Event
+    from .ObservableCollections.utils import make_observable, make_plain
     from .renderer import render
     from .filters.pipeline import Pipeline
     from .filters.local_norm import LocalNorm
@@ -29,6 +30,7 @@ except ImportError:
     from ObservableCollections.observabledict import ObservableDict
     from ObservableCollections.observable import Observable
     from ObservableCollections.event import Event
+    from ObservableCollections.utils import make_observable, make_plain
     from renderer import render
     from filters.pipeline import Pipeline
     from filters.local_norm import LocalNorm
@@ -40,7 +42,7 @@ class Model(Observable):
     '''
 
     def __init__(self, use_gpu=True, debug=False, drop_tasks=True):
-        Observable.__init__(self)
+        super().__init__()
 
         ## Setup image rendering process
         self.rendering_queue = Queue()
@@ -165,7 +167,7 @@ class Model(Observable):
         for channel in range(n_channels):
             channel_property = {}
             channel_property['name'] = f'Channel {channel}'
-            channel_property['pipeline'] = Pipeline([LocalNorm(80,31), SigmoidNorm(0,100,49,51)]).serialize()
+            channel_property['pipeline'] = make_observable(Pipeline([LocalNorm(80,31), SigmoidNorm(0,100,49,51)]).serialize())
             channel_property['use_local_contrast'] = True
             channel_property['local_contrast_neighborhood'] = 31
             channel_property['local_contrast_cut_off'] = 80
@@ -182,6 +184,11 @@ class Model(Observable):
             channel_property = ObservableDict(channel_property)
             channel_property.attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
             channel_property.attach(self.update_render)
+            channel_property['pipeline'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
+            channel_property['pipeline'].attach(self.update_render)
+            for item in channel_property['pipeline']['filters']:
+                item['params'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
+                item['params'].attach(self.update_render)
             self.channel_props.append(channel_property)
 
 
@@ -212,7 +219,8 @@ class Model(Observable):
             return
 
         render_task = {}
-        render_task['channel_properties'] = [dict(channel_property) for channel_property in self.channel_props]
+        # render_task['channel_properties'] = [dict(channel_property) for channel_property in self.channel_props]
+        render_task['channel_properties'] = make_plain(self.channel_props)
 
         ## If image has changed, pass it to the rendering thread too
         if event is not None and event.action == 'propertyChanged' and event.propertyName == 'image':
