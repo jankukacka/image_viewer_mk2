@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-#  File: scrollable_window.py
+#  File: scrolled_frame.py
 #  Author: Benjamin Johnson
 #  Date: 9/2019
 #  Source: https://github.com/bmjcode/tkScrolledFrame

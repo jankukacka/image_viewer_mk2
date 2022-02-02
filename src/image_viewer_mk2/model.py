@@ -21,12 +21,18 @@ try:
     from .ObservableCollections.observable import Observable
     from .ObservableCollections.event import Event
     from .renderer import render
+    from .filters.pipeline import Pipeline
+    from .filters.local_norm import LocalNorm
+    from .filters.sigmoid_norm import SigmoidNorm
 except ImportError:
     from ObservableCollections.observablelist import ObservableList
     from ObservableCollections.observabledict import ObservableDict
     from ObservableCollections.observable import Observable
     from ObservableCollections.event import Event
     from renderer import render
+    from filters.pipeline import Pipeline
+    from filters.local_norm import LocalNorm
+    from filters.sigmoid_norm import SigmoidNorm
 
 class Model(Observable):
     '''
@@ -53,29 +59,12 @@ class Model(Observable):
         self._render = None
         self.suspend_render = False
 
-        # self.histograms = None
-        # self.responses = None
         self.response_images = None
 
         self.channel_props = ObservableList()
         self.channel_props.attach(lambda e, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props', child=e))
         self.channel_prop_clipboard = None
 
-        imoptions = {
-            'use_unsharp_mask': True,
-            'unsharp_mask_radius': 0.5,
-            'unsharp_mask_amount': 1.0,
-            'wavelength': 10,
-            'wavelength_median': 5
-        }
-        self.imoptions = ObservableDict(imoptions)
-        self.imoptions.attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='imoptions'))
-        self.imoptions.attach(self.update_render)
-
-        self.special_options = {
-            ## Allows to selectively switch off unsharp mask for channel 2
-            'no_sharpening_channel_2': False
-        }
 
     def __enter__(self):
         self.rendering_process.start()
@@ -176,6 +165,7 @@ class Model(Observable):
         for channel in range(n_channels):
             channel_property = {}
             channel_property['name'] = f'Channel {channel}'
+            channel_property['pipeline'] = Pipeline([LocalNorm(80,31), SigmoidNorm(0,100,49,51)]).serialize()
             channel_property['use_local_contrast'] = True
             channel_property['local_contrast_neighborhood'] = 31
             channel_property['local_contrast_cut_off'] = 80
@@ -223,8 +213,6 @@ class Model(Observable):
 
         render_task = {}
         render_task['channel_properties'] = [dict(channel_property) for channel_property in self.channel_props]
-        render_task['imoptions'] = dict(self.imoptions)
-        render_task['special_options'] = self.special_options
 
         ## If image has changed, pass it to the rendering thread too
         if event is not None and event.action == 'propertyChanged' and event.propertyName == 'image':

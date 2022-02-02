@@ -12,10 +12,10 @@ from matplotlib.colors import is_color_like, to_hex
 
 try:
     from . import view as view_
-    from .windnd import hook_dropfiles
+    from .utils.windnd import hook_dropfiles
 except ImportError:
     import view as view_
-    from windnd import hook_dropfiles
+    from utils.windnd import hook_dropfiles
 
 class Presenter(object):
     '''
@@ -24,22 +24,9 @@ class Presenter(object):
     def __init__(self, view, model):
         self.view = view
         self.model = model
-        # filename = self.view.asksaveasfilename(title='Save render as...', filetypes=[('Numpy files', '.npy')], initialfile='render.npy')
-
-        ## Init view from model
-        # self.color_onchage()
-        # self.view.var_colorspace.set(self.model.color_space)
-        # for var, color in zip(self.view.var_color, self.model.colors):
-        #     var.set(color)
-        # for obj, var in zip(self.view.color_previews, self.view.var_color):
-        #     obj.config(background=var.get())
-        # cmap2d.plot_cmap(self.model.colormap, self.view.axis_cmap)
-        # self.view.figure_canvas.draw()
 
         ## Define view callbacks
         ## -- Update color previews
-        # for obj, var in zip(self.view.color_previews, self.view.var_color):
-        #     var.trace('w', lambda _1,_2,_3, obj=obj, var=var: self.update_widget_bkg(obj,var))
         self.view.var_channel['color'].trace('w', lambda _1,_2,_3, obj=self.view.color_preview, var=self.view.var_channel['color']: self.update_widget_bkg(obj,var))
 
         # ## -- color space changes
@@ -57,10 +44,6 @@ class Presenter(object):
         self.view.var_selected_channel.trace('w', lambda _1,_2,_3, self=self: self.channel_onchange())
         for key,var in self.view.var_channel.items():
             var.trace('w', lambda _1,_2,_3,var=var,key=key: self.channel_var_onchange(var,key))
-
-        # ## -- image option changes
-        # for key,var in self.view.var_imoptions.items():
-        #     var.trace('w', lambda _1,_2,_3,var=var,key=key: self.imoption_var_onchange(var,key))
 
         ## -- channel control buttons
         self.view.channels_panel.btn_hide_all.config(command=self.hide_all)
@@ -167,11 +150,6 @@ class Presenter(object):
                     #     if key in self.view.property_frames:
                     #         view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
 
-            if event.propertyName == 'imoptions':
-                for key, val in self.model.imoptions.items():
-                    self.view.var_imoptions[key].set(val)
-                    if key in self.view.imoption_frames:
-                        view_.set_state(self.view.imoption_frames[key], 'normal' if val else 'disable')
 
             if event.propertyName == 'render':
                 if self.model.render is not None:
@@ -261,19 +239,6 @@ class Presenter(object):
             cindex = self.view.get_active_channel()
         self.model.channel_props[cindex][key] = var.get()
 
-    def imoption_var_onchange(self, var, key):
-        self.model.imoptions[key] = var.get()
-
-    def update_colormap(self):
-        pass
-        # x = self.model.responses[0][1]
-        # y = self.model.responses[1][1]
-        # xx,yy = np.meshgrid(x,y)
-        # coords = np.stack([xx,yy], axis=-1)
-        # preview = self.model.colormap(coords)
-        # self.view.axis_cmap.imshow(preview)
-        # # cmap2d.plot_cmap(self.model.colormap, self.view.axis_cmap)
-        # self.view.figure_cmap_canvas.draw()
 
     @staticmethod
     def update_widget_bkg(obj,var):

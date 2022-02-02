@@ -27,18 +27,18 @@ import happy.plots as hpp
 
 try:
     from . import skin as skin_
-    from .limiter import Limiter
-    from .loader_animation import LoaderAnimation
-    from .channels_list import ChannelsList
-    from .about import WindowAbout
-    from .tk_call_wrapper import CallWrapper
+    from .tk_widgets.limiter import Limiter
+    from .tk_widgets.loader_animation import LoaderAnimation
+    from .tk_widgets.channels_list import ChannelsList
+    from .tk_widgets.window_about import WindowAbout
+    from .utils.tk_call_wrapper import CallWrapper
 except ImportError:
     import skin as skin_
-    from limiter import Limiter
-    from loader_animation import LoaderAnimation
-    from channels_list import ChannelsList
-    from about import WindowAbout
-    from tk_call_wrapper import CallWrapper
+    from tk_widgets.limiter import Limiter
+    from tk_widgets.loader_animation import LoaderAnimation
+    from tk_widgets.channels_list import ChannelsList
+    from tk_widgets.window_about import WindowAbout
+    from utils.tk_call_wrapper import CallWrapper
 
 
 def set_state(element, state):
@@ -86,7 +86,6 @@ class View(tk.Tk):
         self.setup_response_panel()
         self.setup_channels_panel()
         self.setup_channels2_panel()
-        # self.setup_imoptions_panel()
         self.setup_model_io()
 
         self.loader = LoaderAnimation((self.figure_canvas.winfo_width()/2, 1), self.skin.bg_color, self.figure_canvas, self)
@@ -285,14 +284,6 @@ class View(tk.Tk):
         setup_slider(gamma_frame, 'Gamma', self.var_channel['gamma'], 0.01, 4, 0.01)
 
 
-            # figure = matplotlib.figure.Figure(figsize=(2,1), dpi=100, facecolor=self.skin.bg_color)
-            # axis = figure.add_subplot(111)
-            # hp.plots.hide_ticks(axis)
-            # canvas = FigureCanvasTkAgg(figure, channel_frame)
-            # canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-            # self.channel_figures[channel_index] = (axis, canvas, [[],None])
-
-
     def setup_channels2_panel(self):
         self.channels_panel = ChannelsList(self.grid_frames[1],self.skin, self.var_selected_channel)
 
@@ -302,118 +293,6 @@ class View(tk.Tk):
         frame.pack(side=tk.TOP, expand=False, fill=tk.BOTH, padx=5, pady=5)
         self.response_canvas = tk.Canvas(frame, width=128, height=128, bg=self.skin.bg_color, bd=0, highlightthickness=0)
         self.response_canvas.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-
-        # self.var_colorspace = tk.StringVar(value='RGB')
-        # self.var_color = [None] * 4
-        # self.color_previews = [None] * 4
-        # self.color_pickers = [None] * 4
-        #
-        # def setup_color_panel(parent_frame, title, color_index):
-        #     self.var_color[color_index] = tk.StringVar(value='#000000')
-        #     variable = self.var_color[color_index]
-        #     color_frame = tk.Frame(parent_frame, bg=self.skin.bg_color)
-        #     color_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0,
-        #                          pady=0)
-        #     label = tk.Label(color_frame, text=title, fg=self.skin.fg_color,
-        #                      bg=self.skin.bg_color, anchor=tk.NW)
-        #     label.pack(side=tk.TOP, expand=False, fill=tk.X)
-        #     grid = tk.Frame(color_frame, bg=self.skin.bg_color)
-        #     grid.pack(side=tk.TOP, expand=True, fill=tk.X)
-        #     preview = tk.Frame(grid, width=16, height=16, bg=variable.get())
-        #     preview.pack(side=tk.LEFT)
-        #     self.color_previews[color_index] = preview
-        #
-        #     # variable.trace("w", lambda _1,_2,_3, obj=preview, var=variable: update_bkg(obj,var) )
-        #
-        #     ttk.Entry(grid, textvariable=variable, width=10).pack(side=tk.LEFT, padx=5)
-        #     path = Path(os.path.dirname(os.path.abspath(__file__)))
-        #     colorpicker = tk.PhotoImage(file=str(path/'colorpicker16.png'))
-        #     btn = tk.Button(grid, image=colorpicker)
-        #     btn.image = colorpicker
-        #     btn.pack(side=tk.LEFT)
-        #     self.color_pickers[color_index] = btn
-        #
-        #
-        # setup_color_panel(frame, 'Color (0,0)', 0)
-        # setup_color_panel(frame, 'Color (1,0)', 1)
-        # setup_color_panel(frame, 'Color (0,1)', 2)
-        # setup_color_panel(frame, 'Color (1,1)', 3)
-        #
-        # tk.Label(frame, text='Color space', fg=self.skin.fg_color,
-        #          bg=self.skin.bg_color, anchor=tk.NW).pack(side=tk.TOP, expand=False, fill=tk.X)
-        # ttk.Combobox(frame, values=['RGB', 'LAB', 'LCHab', 'LCHuv', 'XYZ', 'HSV'],
-        #              state='readonly',
-        #              textvariable=self.var_colorspace).pack(side=tk.TOP, expand=False, fill=tk.X)
-        #
-        # self.figure_cmap = matplotlib.figure.Figure(figsize=(1,1), dpi=100, facecolor=self.skin.bg_color)
-        # self.axis_cmap = self.figure_cmap.add_subplot(111)
-        # hp.plots.hide_ticks(self.axis_cmap)
-        # self.figure_cmap_canvas = FigureCanvasTkAgg(self.figure_cmap, frame)
-        # self.figure_cmap_canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-
-
-    def setup_imoptions_panel(self):
-        parent_frame = ttk.LabelFrame(self.grid_frames[2], text='Options', padding=5)
-        parent_frame.pack(side=tk.TOP, expand=False, fill=tk.BOTH, padx=5, pady=5)
-
-        self.var_imoptions = {
-            'wavelength': tk.IntVar(value=10),
-            'wavelength_median': tk.IntVar(value=1),
-            'use_unsharp_mask': tk.BooleanVar(value=True),
-            'unsharp_mask_radius': tk.DoubleVar(value=.5),
-            'unsharp_mask_amount': tk.DoubleVar(value=1)
-        }
-        self.imoption_frames = {}
-
-        def setup_textbox_entry(parent_frame, title, variable):
-            frame = tk.Frame(parent_frame, bg=self.skin.bg_color)
-            frame.pack(side=tk.TOP, expand=True, fill=tk.X, pady=(0,5))
-            label = tk.Label(frame, text=title, fg=self.skin.fg_color,
-                             bg=self.skin.bg_color, anchor=tk.NW)
-            label.pack(side=tk.LEFT, expand=False, fill=tk.BOTH, padx=(0,5))
-            label = ttk.Entry(frame, textvariable=variable, width=6)
-            label.pack(side=tk.RIGHT, expand=False, fill=tk.BOTH)
-
-        def setup_slider(parent_frame, title, variable, limit_low, limit_high, resolution):
-            slider_frame = tk.Frame(parent_frame, bg=self.skin.bg_color)
-            slider_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0,
-                                 pady=0)
-            ## Top label
-            if title is not None:
-                label = tk.Label(slider_frame, text=title, fg=self.skin.fg_color,
-                                 bg=self.skin.bg_color, anchor=tk.NW)
-                label.pack(side=tk.TOP, expand=False, fill=tk.X)
-
-            ## Pad-x compensates for entry starting too left
-            grid = tk.Frame(slider_frame, bg=self.skin.bg_color)
-            grid.pack(side=tk.TOP, expand=True, fill=tk.X, padx=(3,0))
-
-            label = ttk.Entry(grid, textvariable=variable, width=6)
-            label.pack(side=tk.LEFT, expand=False, fill=tk.BOTH)
-            ## Left label
-            label = tk.Label(grid, text='{}'.format(limit_low),
-                             fg=self.skin.fg_color, bg=self.skin.bg_color, anchor=tk.NE, width=4)
-            label.pack(side=tk.LEFT, expand=False, fill=tk.BOTH)
-            scale = Limiter(grid, from_=limit_low, to=limit_high, resolution=resolution,
-                            orient=tk.HORIZONTAL, variable=variable)
-            scale.pack(side=tk.LEFT, expand=True, fill=tk.X)
-            ## Right label
-            label = tk.Label(grid, text='{}'.format(limit_high),
-                             fg=self.skin.fg_color, bg=self.skin.bg_color, anchor=tk.NE, width=4)
-            label.pack(side=tk.LEFT, expand=False, fill=tk.BOTH)
-
-        setup_textbox_entry(parent_frame, 'Wavelength index', self.var_imoptions['wavelength'])
-        setup_textbox_entry(parent_frame, 'Wavelength median window', self.var_imoptions['wavelength_median'])
-
-        checkbox = ttk.Checkbutton(parent_frame, text='Unsharp mask',
-                                   variable=self.var_imoptions['use_unsharp_mask'],
-                                   onvalue=True, offvalue=False)
-        checkbox.pack(side=tk.TOP, expand=False, fill=tk.X)
-        unsharp_mask_frame = tk.Frame(parent_frame, background=self.skin.bg_color)
-        unsharp_mask_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=(20,0), pady=0)
-        setup_slider(unsharp_mask_frame, 'Radius', self.var_imoptions['unsharp_mask_radius'], 0, 5, .01)
-        setup_slider(unsharp_mask_frame, 'Amount', self.var_imoptions['unsharp_mask_amount'], 0, 10, .1)
-        self.imoption_frames['use_unsharp_mask'] = unsharp_mask_frame
 
 
     def setup_model_io(self):

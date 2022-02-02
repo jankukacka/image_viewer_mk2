@@ -22,7 +22,7 @@ __version__ = metadata.version('image-viewer-mk2')
 
 def prepare_icon(filename, skin):
     path = Path(os.path.dirname(os.path.abspath(__file__)))
-    icon = Image.open(str(path/'resources'/filename))
+    icon = Image.open(str(path.parent/'resources'/filename))
     icon2 = icon.convert('RGB')
     icon2 = ImageOps.invert(icon2)
     icon2 = Image.fromarray(np.concatenate([np.array(icon2), np.array(icon)[...,-1,None]], axis=-1), mode='RGBA')
