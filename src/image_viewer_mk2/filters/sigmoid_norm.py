@@ -23,7 +23,7 @@ class SigmoidNorm(filter.Filter):
 
     name = 'sigmoid_norm'
 
-    def __init__(self, lower, upper, new_lower, new_upper):
+    def __init__(self, lower=0, upper=100, new_lower=49, new_upper=51):
         '''
         # Arguments:
             - lower: percentile between 0 and 100, must be lower than `upper`.
@@ -49,19 +49,24 @@ class SigmoidNorm(filter.Filter):
         '''
         if not self.active:
             return img
+        return self.call(img, self.lower, self.upper, self.new_lower, self.new_upper)
 
+
+    @staticmethod
+    def call(img, lower, upper, new_lower, new_upper, **kwargs):
         eps = 1e-8
 
-        low = self.lower/100
-        high = self.upper/100
+        low = lower/100
+        high = upper/100
 
-        lower = self.new_lower/100
-        upper = self.new_upper/100
+        lower = new_lower/100
+        upper = new_upper/100
         new_low = np.log(eps + lower/(1-lower))  # eps to avoid log(0)
         new_high = np.log(upper/(1-upper+eps))   # eps to avoid division by 0
         img = (new_high-new_low) * (img-low)/(high-low+eps) + new_low
         img = 1/(1+np.exp(-img))
         return (img - img.min()) / img.ptp()
+
 
     def serialize(self):
         base_dict = super().serialize()

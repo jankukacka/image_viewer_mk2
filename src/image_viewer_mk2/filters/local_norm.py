@@ -23,7 +23,7 @@ class LocalNorm(filter.Filter):
 
     name = 'local_norm'
 
-    def __init__(self, cutoff_percentile, kernel_size):
+    def __init__(self, cutoff_percentile=80, kernel_size=31):
         '''
         # Arguments:
             - kernel_size: size of the averaging kernel or tuple of (kernel_height,
@@ -45,12 +45,16 @@ class LocalNorm(filter.Filter):
         '''
         if not self.active:
             return img
-        kernel_size = hp.misc.ensure_list(self.kernel_size)
+        return self.call(img, self.kernel_size, self.cutoff_percentile)
+
+    @staticmethod
+    def call(img, kernel_size, cutoff_percentile, **kwargs):
+        kernel_size = hp.misc.ensure_list(kernel_size)
         if len(kernel_size) == 1:
             kernel_size = (kernel_size[0], kernel_size[0])
 
         norm = gaussian_filter(img, [k/3 for k in kernel_size])
-        cutoff = np.max(norm) * np.power(self.cutoff_percentile/100, 3)
+        cutoff = np.max(norm) * np.power(cutoff_percentile/100, 3)
         norm_img = img / np.maximum(norm, cutoff)
         norm_img = np.nan_to_num(norm_img)
 
@@ -58,6 +62,7 @@ class LocalNorm(filter.Filter):
         norm_img = (norm_img-norm_img.min())/norm_img.ptp()
 
         return (img+norm_img)/2
+
 
     def serialize(self):
         base_dict = super().serialize()

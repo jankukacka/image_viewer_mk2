@@ -35,6 +35,7 @@ try:
     from .utils.tk_call_wrapper import CallWrapper
     from .tk_widgets import filter_config
     from .tk_widgets import sortable_accordion
+    from .filters.filter_factory import get_available_filters
 except ImportError:
     import skin as skin_
     from tk_widgets.limiter import Limiter
@@ -44,6 +45,7 @@ except ImportError:
     from utils.tk_call_wrapper import CallWrapper
     from tk_widgets import filter_config
     from tk_widgets import sortable_accordion
+    from filters.filter_factory import get_available_filters
 
 def set_state(element, state):
     try:
@@ -188,23 +190,10 @@ class View(tk.Tk):
                              textvariable=self.var_selected_channel)
         self.channel_combo.pack(side=tk.TOP, expand=False, fill=tk.X)
 
-        # vis_frame = tk.Frame(channel_frame, bg=self.skin.bg_color)
-        # vis_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=0)
-        #
-        #
-        # ttk.Checkbutton(vis_frame, text='Visible', variable=self.var_channel['visible'],
-        #                 onvalue=True, offvalue=False).pack(side=tk.LEFT, expand=False)
-        #
-        # self.btn_show_all = ttk.Button(vis_frame, text='Show all')
-        # self.btn_show_all.pack(side=tk.RIGHT, expand=False, pady=5)
-        # self.btn_hide_all = ttk.Button(vis_frame, text='Hide all')
-        # self.btn_hide_all.pack(side=tk.RIGHT, expand=False, padx=5, pady=5)
 
         color_frame = tk.Frame(channel_frame, bg=self.skin.bg_color)
         color_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=5)
-        # label = tk.Label(color_frame, text='Color', fg=self.skin.fg_color,
-        #                  bg=self.skin.bg_color, anchor=tk.NW)
-        # label.pack(side=tk.TOP, expand=False, fill=tk.X)
+
         grid = tk.Frame(color_frame, bg=self.skin.bg_color)
         grid.pack(side=tk.TOP, expand=True, fill=tk.X)
         self.color_preview = tk.Frame(grid, width=16, height=16, bg=self.var_channel['color'].get())
@@ -229,65 +218,14 @@ class View(tk.Tk):
 
         self.pipelines_panel = PanelPipelines(channel_frame, self.skin, self.var_selected_channel)
 
-        # def setup_slider(parent_frame, title, variable, limit_low, limit_high, resolution):
-        #     slider_frame = tk.Frame(parent_frame, bg=self.skin.bg_color)
-        #     slider_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0,
-        #                          pady=0)
-        #     ## Top label
-        #     if title is not None:
-        #         label = tk.Label(slider_frame, text=title, fg=self.skin.fg_color,
-        #                          bg=self.skin.bg_color, anchor=tk.NW)
-        #         label.pack(side=tk.TOP, expand=False, fill=tk.X)
-        #
-        #     ## Pad-x compensates for entry starting too left
-        #     grid = tk.Frame(slider_frame, bg=self.skin.bg_color)
-        #     grid.pack(side=tk.TOP, expand=True, fill=tk.X, padx=(3,0))
-        #
-        #     label = ttk.Entry(grid, textvariable=variable, width=6)
-        #     label.pack(side=tk.LEFT, expand=False, fill=tk.BOTH)
-        #     ## Left label
-        #     label = tk.Label(grid, text='{}'.format(limit_low),
-        #                      fg=self.skin.fg_color, bg=self.skin.bg_color, anchor=tk.NE, width=4)
-        #     label.pack(side=tk.LEFT, expand=False, fill=tk.BOTH)
-        #     scale = Limiter(grid, from_=limit_low, to=limit_high, resolution=resolution,
-        #                     orient=tk.HORIZONTAL, variable=variable)
-        #     scale.pack(side=tk.LEFT, expand=True, fill=tk.X)
-        #     ## Right label
-        #     label = tk.Label(grid, text='{}'.format(limit_high),
-        #                      fg=self.skin.fg_color, bg=self.skin.bg_color, anchor=tk.NE, width=4)
-        #     label.pack(side=tk.LEFT, expand=False, fill=tk.BOTH)
-        #
-        # checkbox = ttk.Checkbutton(channel_frame, text='Local contrast enhancement',
-        #                            variable=self.var_channel['use_local_contrast'],
-        #                            onvalue=True, offvalue=False)
-        # checkbox.pack(side=tk.TOP, expand=False, fill=tk.X)
-        # local_contrast_frame = tk.Frame(channel_frame, background=self.skin.bg_color)
-        # local_contrast_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=(20,0), pady=0)
-        # setup_slider(local_contrast_frame, 'Neighborhood size', self.var_channel['local_contrast_neighborhood'], 1, 101, 2)
-        # setup_slider(local_contrast_frame, 'Normalizer cut-off (% of max)', self.var_channel['local_contrast_cut_off'], 0, 100, 1)
-        # self.property_frames['use_local_contrast'] = local_contrast_frame
-        #
-        # checkbox = ttk.Checkbutton(channel_frame, text='Sigmoid norm',
-        #                            variable=self.var_channel['use_sigmoid'],
-        #                            onvalue=True, offvalue=False)
-        # checkbox.pack(side=tk.TOP, expand=False, fill=tk.X, pady=(5,0))
-        # sigmoid_frame = tk.Frame(channel_frame, background=self.skin.bg_color)
-        # sigmoid_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=(20,0), pady=0)
-        # setup_slider(sigmoid_frame, 'Lower end', self.var_channel['sigmoid_low'], 0, 100, 0.5)
-        # setup_slider(sigmoid_frame, 'Upper end', self.var_channel['sigmoid_high'], 0, 100, 0.5)
-        # setup_slider(sigmoid_frame, 'Sigmoid lower end', self.var_channel['sigmoid_new_low'], 0, 100, 0.5)
-        # setup_slider(sigmoid_frame, 'Sigmoid upper end', self.var_channel['sigmoid_new_high'], 0, 100, 0.5)
-        # self.property_frames['use_sigmoid'] = sigmoid_frame
-        #
-        # checkbox = ttk.Checkbutton(channel_frame, text='Gamma correction',
-        #                            variable=self.var_channel['use_gamma'],
-        #                            onvalue=True, offvalue=False)
-        # checkbox.pack(side=tk.TOP, expand=False, fill=tk.X, pady=(5,0))
-        # gamma_frame = tk.Frame(channel_frame, background=self.skin.bg_color)
-        # gamma_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=(20,0), pady=0)
-        # self.property_frames['use_gamma'] = gamma_frame
-        #
-        # setup_slider(gamma_frame, 'Gamma', self.var_channel['gamma'], 0.01, 4, 0.01)
+        self.btn_add_filter = ttk.Button(channel_frame, text='Add filter', command=self.show_filter_menu)
+        self.btn_add_filter.pack(side=tk.BOTTOM)
+        self.menu_add_filter = {'obj': tk.Menu(self)}
+        for T_filter in get_available_filters():
+            T_widget = filter_config.get_filter_widget(T_filter.name)
+            if T_widget is not None:
+                self.menu_add_filter['obj'].add_command(label=T_widget.title)
+                self.menu_add_filter[T_filter.name] = T_widget.title
 
 
     def setup_channels2_panel(self):
@@ -345,6 +283,13 @@ class View(tk.Tk):
             self.response_ref = ImageTk.PhotoImage(image=Image.fromarray(response_image))
             self.response_canvas.create_image((0,0), image=self.response_ref,anchor=tk.NW)
 
+    def show_filter_menu(self):
+        try:
+            x = self.btn_add_filter.winfo_rootx()
+            y = self.btn_add_filter.winfo_rooty()
+            self.menu_add_filter['obj'].tk_popup(x, y, 0)
+        finally:
+            self.menu_add_filter['obj'].grab_release()
 
     def update_channels(self, channel_props):
         self.channel_combo.configure(values=[cp['name'] for cp in channel_props])

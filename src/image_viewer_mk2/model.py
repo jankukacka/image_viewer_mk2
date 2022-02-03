@@ -23,6 +23,7 @@ try:
     from .ObservableCollections.utils import make_observable, make_plain
     from .renderer import render
     from .filters.pipeline import Pipeline
+    from .filters.filter_factory import get_filter_by_name
     from .filters.local_norm import LocalNorm
     from .filters.sigmoid_norm import SigmoidNorm
 except ImportError:
@@ -33,6 +34,7 @@ except ImportError:
     from ObservableCollections.utils import make_observable, make_plain
     from renderer import render
     from filters.pipeline import Pipeline
+    from filters.filter_factory import get_filter_by_name
     from filters.local_norm import LocalNorm
     from filters.sigmoid_norm import SigmoidNorm
 
@@ -156,6 +158,34 @@ class Model(Observable):
         e = Event('propertyChanged', self)
         e.propertyName = 'image'
         self.update_render(e)
+
+    def add_filter(self, channel_index, filter):
+        '''
+        Appends a filter to the rendering pipeline of the given channel
+
+        # Arguments:
+            - channel_index: int. Index of the channel to append the filter to.
+            - filter: Filter object or filter type name to append
+        '''
+        T_filter = get_filter_by_name(filter)
+        if T_filter is not None:
+            filter = T_filter()
+
+        filter_dict = make_observable(filter.serialize())
+        self.channel_props[channel_index]['pipeline']['filters'].append(filter_dict)
+        filter_dict['params'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
+        filter_dict['params'].attach(self.update_render)
+
+    def remove_filter(self, channel_index, filter_index):
+        '''
+        Removes n-th filter from the rendering pipeline of the given channel
+
+        # Arguments:
+            - channel_index: int. Index of the channel to append the filter to.
+            - filter_index: int. Index of the filter to be removed.
+        '''
+        del self.channel_props[channel_index]['pipeline']['filters'][filter_index]
+
 
     def update_channels(self):
         ## Clear old channel props

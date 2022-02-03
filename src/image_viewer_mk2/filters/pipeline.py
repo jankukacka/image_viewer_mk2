@@ -32,6 +32,15 @@ class Pipeline(object):
         return {'filters': [filter.serialize() for filter in self.filters]}
 
     @staticmethod
+    def call(serialization, img):
+        for filter in serialization['filters']:
+            params = filter['params']
+            if params['active']:
+                T_filter = filter_factory.get_filter_by_name(filter['name'])
+                img = T_filter.call(img, **params)
+        return img
+
+    @staticmethod
     def deserialize(serialization):
         filters = []
         for filter in serialization['filters']:

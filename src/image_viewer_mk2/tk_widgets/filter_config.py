@@ -23,7 +23,9 @@ def get_filter_widget(filter_name):
         return LocalNormConfig
     elif filter_name == 'sigmoid_norm':
         return SigmoidNormConfig
-
+    elif filter_name == 'unsharp_mask':
+        return UnsharpMaskConfig
+        
 class FilterConfig(tk.Frame):
     def __init__(self, parent, skin, *args, **kwargs):
         super().__init__(parent, bg=skin.bg_color, *args, **kwargs)
@@ -90,3 +92,16 @@ class SigmoidNormConfig(FilterConfig):
         self._setup_slider('Upper end', self.vars['upper'], 0, 100, 0.5)
         self._setup_slider('Sigmoid lower end', self.vars['new_lower'], 0, 100, 0.5)
         self._setup_slider('Sigmoid upper end', self.vars['new_upper'], 0, 100, 0.5)
+
+class UnsharpMaskConfig(FilterConfig):
+    name = 'unsharp_mask'
+    title = 'Unsharp mask'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.vars['kernel_size'] = tk.DoubleVar(value=31)
+        self.vars['strength'] = tk.DoubleVar(value=100)
+
+        self._setup_slider('Neighborhood size', self.vars['kernel_size'], 0.001, 10, 0.1)
+        self._setup_slider('Strength', self.vars['strength'], -10, 10, 0.1)

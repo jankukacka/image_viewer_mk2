@@ -28,6 +28,7 @@ class PanelPipelines(object):
     def recreate_items(self, channel_props):
         while len(self.accordions) > 0:
             self.accordions[-1].destroy()
+            self.accordions[-1].pp_observer_target.detach(self.accordions[-1].pp_observer)
             del self.accordions[-1]
 
         for channel_prop in channel_props:
@@ -36,7 +37,9 @@ class PanelPipelines(object):
             for filter in channel_prop['pipeline']['filters']:
                 self.create_widget(accordion, filter)
 
-            channel_prop['pipeline']['filters'].attach(lambda e, self=self, accordion=accordion: self.on_sourceupdatded(e, accordion))
+            accordion.pp_observer = lambda e, self=self, accordion=accordion: self.on_sourceupdatded(e, accordion)
+            accordion.pp_observer_target = channel_prop['pipeline']['filters']
+            channel_prop['pipeline']['filters'].attach(accordion.pp_observer)
             self.accordions.append(accordion)
 
     def create_widget(self, accordion, filter, index=None):

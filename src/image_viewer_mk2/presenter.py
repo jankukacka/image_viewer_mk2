@@ -72,6 +72,12 @@ class Presenter(object):
         self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['transpose'], command=self.model.transpose_image)
         self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['autocolor'], command=self.model.autocolor)
 
+        ## -- adding filters
+        for key, val in self.view.menu_add_filter.items():
+            if key == 'obj': continue
+            self.view.menu_add_filter['obj'].entryconfig(
+                self.view.menu_add_filter[key],
+                command=lambda filter=key: self.model.add_filter(self.view.get_active_channel(), filter))
 
         ## -- on closing
         # self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -239,6 +245,14 @@ class Presenter(object):
         if cindex is None:
             cindex = self.view.get_active_channel()
         self.model.channel_props[cindex][key] = var.get()
+
+    def add_filter(self):
+        cindex = self.view.get_active_channel()
+        from .filters import unsharp_mask
+        from .ObservableCollections.utils import make_observable
+        self.model.channel_props[cindex]['pipeline']['filters'].append(
+            make_observable(unsharp_mask.UnsharpMask(1,1).serialize()))
+
 
 
     @staticmethod

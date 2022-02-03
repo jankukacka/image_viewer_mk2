@@ -10,6 +10,7 @@ import traceback
 import numpy as np
 import happy as hp
 from PIL import Image
+from time import time
 from queue import Empty
 from multiprocessing import Process, Queue
 from matplotlib.colors import PowerNorm
@@ -105,11 +106,11 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
     '''
     Code for the rendering process
     '''
-
+    from functools import reduce
     image_local = None
     image_local_changed = False
     pipelines = {}
-
+    cache = {}
     while True:
         ## Flush old tasks, work only on the last one
         ## NOTE: This is only reliable with a single consumer thread
@@ -135,38 +136,58 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
             # print('Exiting rendering thread')
             break
 
+        time_render = 0
+        time_validation = 0
+        time_coloring = 0
+        t0 = time()
         try:
             processed_images = []
             response_images = []
             if image_local_changed:
                 pipelines = {}
+                colors = {}
                 image_local_changed = False
 
 
             for channel_index, channel_property in enumerate(task['channel_properties']):
                 ## Ignore hidden channels
                 if not channel_property['visible']:
-                    response_images.append(np.zeros((128,256,3), dtype=np.uint8))
+                    response_images.append(None)
                     continue
 
                 image = image_local[...,channel_index]
+                t1 = time()
                 if (channel_index not in pipelines
-                    or channel_property['pipeline'] != pipelines[channel_index].serialize()):
-                    pipelines[channel_index] = Pipeline.deserialize(channel_property['pipeline'])
+                    or channel_property['pipeline'] != pipelines[channel_index]
+                    or channel_property['color'] != colors[channel_index]):
+                    t2 = time()
+                    pipelines[channel_index] = channel_property['pipeline']
+                    colors[channel_index] = channel_property['color']
+                    output_image = Pipeline.call(channel_property['pipeline'], image)
+                    cmap = hp.plots.cmap((0,'#444444'),(1/256, 'k'), (1,channel_property['color']))
+                    response_image = render_response(image, output_image, cmap)
+                    t3 = time()
+                    output_image = hp.plots.cmap('k', channel_property['color'])(output_image)
+                    t4 = time()
+                    cache[channel_index] = output_image, response_image
+                else:
+                    t2 = time()
+                    output_image, response_image = cache[channel_index]
+                    t3 = time()
 
-                output_image = pipelines[channel_index](image)
-
-                response_image = render_response(image, output_image)
-
-                output_image = hp.plots.cmap('k', channel_property['color'])(output_image)
+                time_render += t3-t2
+                time_validation += t2-t1
+                time_coloring += t4-t3
                 processed_images.append(output_image)
                 response_images.append(response_image)
 
             ## Render
-            render = np.stack(processed_images, axis=-1)
-            render = np.sum(render, axis=(-1))
+            t5 = time()
+            render = reduce(np.add, processed_images)
             render = np.minimum(render, 1) * 255
             render = Image.fromarray(render.astype(np.uint8))
+            t6 = time()
+            print(f'Pipeline validation: {time_validation:.3f} Rendering: {time_render:.3f} Coloring: {time_coloring:.3f} Sum: {t6-t5:.3f} Total: {t6-t0:.3f}')
             rendered_queue.put((render, response_images))
         except Exception as e:
             if debug:
@@ -178,5 +199,18 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
     rendered_queue.put(None)
 
 
-def render_response(img1, img2):
-    return np.zeros((128,256,3), dtype=np.uint8)
+def render_response(input_image, output_image, cmap):
+    from skimage.transform import resize
+    response = np.empty((128,256,4))
+    response[:] = cmap(np.linspace(0,1,response.shape[0]))[:,None]
+    hist = np.histogram2d(output_image.ravel(), input_image.ravel(), bins=(64,128))[0]
+    hist = np.log(hist)
+    hist = np.nan_to_num(0.5 + 0.5*(hist / hist.max()), neginf=0)
+    response[...,-1] = resize(hist, response.shape[:2], preserve_range=True)
+    print(np.max(response))
+    response = (255*response).astype(np.uint8)[::-1]
+    bkg = np.zeros_like(response)
+    bkg[::32] = bkg[-1] = bkg[:,::32] = bkg[:,-1] = 0x66
+    mask = response[:,:,-1] == 0
+    response[mask] = bkg[mask]
+    return response
