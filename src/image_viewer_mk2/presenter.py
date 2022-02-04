@@ -233,6 +233,9 @@ class Presenter(object):
 
         self.view.channels_panel.highlight_item(channel_index)
         self.view.pipelines_panel.on_channel_selected_change(channel_index)
+        if self.model.response_images is not None:
+            self.view.show_response(self.model.response_images[channel_index])
+
 
     def color_onchage(self):
         channel_index = self.view.get_active_channel()

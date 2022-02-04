@@ -196,7 +196,7 @@ class View(tk.Tk):
 
         grid = tk.Frame(color_frame, bg=self.skin.bg_color)
         grid.pack(side=tk.TOP, expand=True, fill=tk.X)
-        self.color_preview = tk.Frame(grid, width=16, height=16, bg=self.var_channel['color'].get())
+        self.color_preview = tk.Frame(grid, width=16, height=16, bg=self.var_channel['color'].get(), highlightthickness=1, highlightbackground='#000000')
         self.color_preview.pack(side=tk.LEFT)
 
         ttk.Entry(grid, textvariable=self.var_channel['color'], width=10).pack(side=tk.LEFT, padx=5)

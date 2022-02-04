@@ -51,7 +51,7 @@ class UnsharpMask(filter.Filter):
         '''
         blurred = gaussian_filter(img, sigma=kernel_size, mode='reflect')
         result = img + (img - blurred) * strength
-        return result
+        return np.clip(result, 0, 1)
 
 
     def serialize(self):

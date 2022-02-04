@@ -37,6 +37,10 @@ class SortableAccordion(tk.Frame):
         self.placeholder = None
         self.pack_params = dict(side=tk.TOP, fill=tk.BOTH, expand=True)
 
+    def __del__(self):
+        ## Any cleanup needed?
+        super().__del__()
+
     def add(self, item, index=None):
         if index is None:
             index = len(self.items)
@@ -50,14 +54,17 @@ class SortableAccordion(tk.Frame):
 
     def remove_at(self, index):
         item = self.items[index]
-        item.unbind('<Button-1>', item.sa_mousedown)
-        item.unbind('<B1-Motion>', item.sa_mousedrag)
+        item.handle.unbind('<Button-1>', item.handle.sa_mousedown)
+        item.handle.unbind('<B1-Motion>', item.handle.sa_mousedrag)
         item.folded.trace_vdelete('w', item.sa_folded)
 
-        self.items[index].destroy()
+        item.destroy()
         del self.items[index]
         del self.widgets[index]
         self._repack()
+
+    def remove(self, item):
+        self.remove_at(self.items.index(item))
 
     def _repack(self):
         self.is_repacking = True

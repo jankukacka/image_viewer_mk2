@@ -12,6 +12,7 @@ import happy as hp
 from PIL import Image
 from time import time
 from queue import Empty
+from functools import reduce
 from multiprocessing import Process, Queue
 from matplotlib.colors import PowerNorm
 
@@ -106,7 +107,6 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
     '''
     Code for the rendering process
     '''
-    from functools import reduce
     image_local = None
     image_local_changed = False
     pipelines = {}
@@ -152,7 +152,9 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
             for channel_index, channel_property in enumerate(task['channel_properties']):
                 ## Ignore hidden channels
                 if not channel_property['visible']:
-                    response_images.append(None)
+                    bkg = np.zeros((128,256,4), dtype=np.uint8)
+                    bkg[::32] = bkg[-1] = bkg[:,::32] = bkg[:,-1] = 0x66
+                    response_images.append(bkg)
                     continue
 
                 image = image_local[...,channel_index]
@@ -163,7 +165,8 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
                     t2 = time()
                     pipelines[channel_index] = channel_property['pipeline']
                     colors[channel_index] = channel_property['color']
-                    output_image = Pipeline.call(channel_property['pipeline'], image)
+                    mn,mx = image.min(), image.max()
+                    output_image = Pipeline.call(channel_property['pipeline'], (image-mn)/(mx-mn))
                     cmap = hp.plots.cmap((0,'#444444'),(1/256, 'k'), (1,channel_property['color']))
                     response_image = render_response(image, output_image, cmap)
                     t3 = time()
@@ -183,6 +186,8 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
 
             ## Render
             t5 = time()
+            ## NOTE: reduce is faster here than stacking the list of arrays and
+            ##       calling np.sum on them
             render = reduce(np.add, processed_images)
             render = np.minimum(render, 1) * 255
             render = Image.fromarray(render.astype(np.uint8))
@@ -207,7 +212,6 @@ def render_response(input_image, output_image, cmap):
     hist = np.log(hist)
     hist = np.nan_to_num(0.5 + 0.5*(hist / hist.max()), neginf=0)
     response[...,-1] = resize(hist, response.shape[:2], preserve_range=True)
-    print(np.max(response))
     response = (255*response).astype(np.uint8)[::-1]
     bkg = np.zeros_like(response)
     bkg[::32] = bkg[-1] = bkg[:,::32] = bkg[:,-1] = 0x66

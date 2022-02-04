@@ -103,7 +103,7 @@ class ChannelsList():
             self.wrap_frame.bind_scroll_wheel(frame.checkbox)
             frame.checkbox.bindtags((bind_tag,) + frame.checkbox.bindtags())
 
-            color_preview = tk.Frame(frame, width=16, height=16, bg=var_channel['color'].get())
+            color_preview = tk.Frame(frame, width=16, height=16, bg=var_channel['color'].get(), highlightthickness=1, highlightbackground='#000000')
             color_preview.pack(side=tk.LEFT)
             color_preview.bindtags((bind_tag,) + color_preview.bindtags())
 

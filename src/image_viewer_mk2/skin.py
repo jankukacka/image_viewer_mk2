@@ -19,8 +19,12 @@ class Skin(object):
         '''
 
         self.bg_color = '#444444'
+        # self.bg_color = '#ffffff'
         self.bg_highlight_color = '#666666'
         self.fg_color = '#FFFFFF'
+        # self.fg_color = '#000000'
+        self.fg_warning_color = '#E63F06'
+
         self.font_heading = tkFont.Font(family='ansi', size=9, weight=tkFont.BOLD)
 
         ttk.Style().configure("TLabelframe", background=self.bg_color)

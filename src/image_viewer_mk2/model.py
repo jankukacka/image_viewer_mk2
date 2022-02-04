@@ -216,6 +216,8 @@ class Model(Observable):
             channel_property.attach(self.update_render)
             channel_property['pipeline'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
             channel_property['pipeline'].attach(self.update_render)
+            channel_property['pipeline']['filters'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
+            channel_property['pipeline']['filters'].attach(self.update_render)
             for item in channel_property['pipeline']['filters']:
                 item['params'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
                 item['params'].attach(self.update_render)
