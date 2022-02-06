@@ -79,7 +79,7 @@ class Presenter(object):
         for key, val in self.view.menu_add_filter.items():
             if key == 'obj': continue
             def add_filter(filter):
-                self.model.add_filter(self.view.get_active_channel(), filter)
+                self.model.add_filter(self.view.get_active_channel(), filter_name=filter)
             self.view.menu_add_filter['obj'].entryconfig(
                 self.view.menu_add_filter[key],
                 command=event_handler.TkCommandEventHandler(add_filter, filter=key))
@@ -229,14 +229,6 @@ class Presenter(object):
         if cindex is None:
             cindex = self.view.get_active_channel()
         self.model.channel_props[cindex][key] = var.get()
-
-    def add_filter(self):
-        cindex = self.view.get_active_channel()
-        from .filters import unsharp_mask
-        from .ObservableCollections.utils import make_observable
-        self.model.channel_props[cindex]['pipeline']['filters'].append(
-            make_observable(unsharp_mask.UnsharpMask(1,1).serialize()))
-
 
 
     @staticmethod

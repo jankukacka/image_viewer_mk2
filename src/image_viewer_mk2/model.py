@@ -166,19 +166,24 @@ class Model(Observable):
         e.propertyName = 'image'
         self.update_render(e)
 
-    def add_filter(self, channel_index, filter):
+    def add_filter(self, channel_index, filter_obj=None, filter_dict=None, filter_name=None):
         '''
-        Appends a filter to the rendering pipeline of the given channel
+        Appends a filter to the rendering pipeline of the given channel.
+
+        At least one of filter_obj, filter_dict, filter_name must be specified
 
         # Arguments:
             - channel_index: int. Index of the channel to append the filter to.
-            - filter: Filter object or filter type name to append
+            - filter_obj: Filter object to append
+            - filter_dict: Filter object dict to append
+            - filter_name: Filter type name to append
         '''
-        T_filter = get_filter_by_name(filter)
-        if T_filter is not None:
-            filter = T_filter()
-
-        filter_dict = make_observable(filter.serialize())
+        if filter_name is not None:
+            T_filter = get_filter_by_name(filter_name)
+            filter_obj = T_filter()
+        if filter_obj is not None:
+            filter_dict = filter_obj.serialize()
+        filter_dict = make_observable(filter_dict)
         self.channel_props[channel_index]['pipeline']['filters'].append(filter_dict)
         filter_dict['params'].attach(event_handler.ObservableEventHandler(self.raiseEvent, name='propertyChanged', propertyName='channel_props'))
         filter_dict['params'].attach(event_handler.ObservableEventHandler(self.update_render))
@@ -211,12 +216,8 @@ class Model(Observable):
             channel_property = ObservableDict(channel_property)
             channel_property.attach(event_handler.ObservableEventHandler(self.raiseEvent, name='propertyChanged', propertyName='channel_props'))
             channel_property.attach(event_handler.ObservableEventHandler(self.update_render))
-            # channel_property['pipeline'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
-            # channel_property['pipeline'].attach(self.update_render)
-            # channel_property['pipeline']['filters'].attach(event_handler.ObservableEventHandler(self.raiseEvent, name='propertyChanged', propertyName='channel_props'))
             channel_property['pipeline']['filters'].attach(event_handler.ObservableEventHandler(self.update_render))
             for item in channel_property['pipeline']['filters']:
-                # item['params'].attach(event_handler.ObservableEventHandler(self.raiseEvent, name='propertyChanged', propertyName='channel_props'))
                 item['params'].attach(event_handler.ObservableEventHandler(self.update_render))
             self.channel_props.append(channel_property)
 
@@ -259,7 +260,7 @@ class Model(Observable):
 
     def save(self):
         model_dict = {}
-        model_dict['channel_props'] = [dict(cp) for cp in self.channel_props]
+        model_dict['channel_props'] = make_plain(self.channel_props)
         return model_dict
 
     def load(self, model_dict):
@@ -269,9 +270,16 @@ class Model(Observable):
         for i, channel_property in enumerate(model_dict['channel_props']):
             if i >= len(self.channel_props):
                 break
+            while len(self.channel_props[i]['pipeline']['filters']) > 0:
+                self.remove_filter(i, 0)
+
             for key, value in channel_property.items():
                 if key in self.channel_props[i]:
-                    self.channel_props[i][key] = value
+                    if key == 'pipeline':
+                        for filter in channel_property['pipeline']['filters']:
+                            self.add_filter(i, filter_dict=filter)
+                    else:
+                        self.channel_props[i][key] = value
                 else:
                     print(f'Config key {key} could not be loaded.')
 
@@ -286,14 +294,27 @@ class Model(Observable):
             channel_prop['color'] = str(to_hex(f'C{i%10}'))
 
     def copy_params(self, channel_index):
-        self.channel_prop_clipboard = dict(self.channel_props[channel_index])
+        self.channel_prop_clipboard = make_plain(self.channel_props[channel_index])
 
     def paste_params(self, channel_index):
         if self.channel_prop_clipboard is None:
             return
+
+        ## Suspend rendering while loading
+        self.suspend_render = True
+
+        while len(self.channel_props[channel_index]['pipeline']['filters']) > 0:
+            self.remove_filter(channel_index, 0)
+
         for key, value in self.channel_prop_clipboard.items():
-            if key not in ['name', 'color', 'visible']:
+            if key not in ['name', 'color', 'visible', 'pipeline']:
                 self.channel_props[channel_index][key] = value
+            elif key == 'pipeline':
+                for filter in self.channel_prop_clipboard['pipeline']['filters']:
+                    self.add_filter(channel_index, filter_dict=filter)
+
+        self.suspend_render = False
+        self.update_render()
 
 
 

@@ -22,87 +22,6 @@ except ImportError:
     from filters.pipeline import Pipeline
 
 
-def render_channel_internal(channel_property, image, fx):
-    torch = fx['torch']
-
-    if channel_property['use_local_contrast']:
-        local_norm = fx['local_norm']
-        image = local_norm(image,
-                           channel_property['local_contrast_neighborhood'],
-                           channel_property['local_contrast_cut_off'])
-    image = (image-image.min())/(image.max() - image.min())
-    response_x = np.linspace(0,1,128)
-    response_y = response_x
-
-    if torch is not None:
-        histogram = torch.histc(image, bins=128, min=0, max=1)
-    else:
-        histogram = np.histogram(image, bins=np.linspace(0,1,129), density=True)[0]
-
-    if channel_property['use_sigmoid']:
-        sigmoid_norm = fx['sigmoid_norm']
-        image, (low, high) = sigmoid_norm(image,
-                                          channel_property['sigmoid_low'],
-                                          channel_property['sigmoid_high'],
-                                          channel_property['sigmoid_new_low'],
-                                          channel_property['sigmoid_new_high'])
-
-        lower = channel_property['sigmoid_new_low']/100
-        upper = channel_property['sigmoid_new_high']/100
-        new_low = np.log(1e-8+lower/(1-lower))
-        new_high = np.log(upper/(1-upper+1e-8))
-        response_y = (new_high-new_low) * (response_x-low)/(high-low+1e-8) + new_low
-        response_y = 1/(1+np.exp(-response_y))
-        response_y = (response_y-response_y.min()) / response_y.ptp()
-
-
-    if channel_property['use_gamma']:
-        response_y = PowerNorm(channel_property['gamma'])(response_y)
-        if torch is not None:
-            image = (image-image.min())/(image.max() - image.min())
-            image = torch.pow(image, channel_property['gamma'])
-        else:
-            image = PowerNorm(channel_property['gamma'])(image)
-
-    if torch is not None:
-        histogram2 = torch.histc(image, bins=128, min=0, max=1)
-    else:
-        histogram2 = np.histogram(image, bins=np.linspace(0,1,129), density=True)[0]
-    histogram, histogram2 = histogram / histogram[1:].max(), histogram2 / histogram2[1:].max()
-
-    ## Convert GPU image to numpy
-    if torch is not None:
-        image = image.cpu().numpy()
-
-    image = hp.plots.cmap('k', channel_property['color'])(image)
-
-    # ## Generate response image
-    if torch is not None:
-        response_image = torch.ones((128,128), device=histogram.device)
-        mask = (128*torch.log(1+histogram[:,None])) > torch.arange(128, device=histogram.device)
-        response_image[mask.T] = .7
-
-        mask = (128*torch.log(1+histogram2[:,None])) > torch.arange(128, device=histogram2.device)
-        response_image[mask.flip(1)] *= .5
-
-        response_image[np.round(127*response_y).astype(int), np.arange(128)] = 0
-        response_image = response_image.flip(0)*255
-        response_image = response_image.cpu().numpy()
-    else:
-        response_image = np.ones((128,128))
-
-        mask = (128*np.log(1+histogram[:,None]))>np.arange(128)
-        response_image[mask.T] = .7
-
-        mask = (128*np.log(1+histogram2[:,None]))>np.arange(128)
-        response_image[mask[:,::-1]] *= .5
-
-        response_image[np.round(127*response_y).astype(int), np.arange(128)] = 0
-        response_image = response_image[::-1]*255
-
-    return image, response_image
-
-
 def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
     '''
     Code for the rendering process
@@ -169,7 +88,7 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
                     mn,mx = image.min(), image.max()
                     image = (image-mn)/(mx-mn)
                     output_image = pipelines[channel_index](image)
-                
+
                     colors[channel_index] = channel_property['color']
                     cmap = hp.plots.cmap((0,'#444444'),(1/256, 'k'), (1,channel_property['color']))
                     response_image = render_response(image, output_image, cmap)
@@ -196,8 +115,8 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
             render = np.minimum(render, 1) * 255
             render = Image.fromarray(render.astype(np.uint8))
             t6 = time()
-            if debug:
-                print(f'Pipeline validation: {time_validation:.3f} Rendering: {time_render:.3f} Coloring: {time_coloring:.3f} Sum: {t6-t5:.3f} Total: {t6-t0:.3f}')
+            # if debug:
+            #     print(f'Pipeline validation: {time_validation:.3f} Rendering: {time_render:.3f} Coloring: {time_coloring:.3f} Sum: {t6-t5:.3f} Total: {t6-t0:.3f}')
             rendered_queue.put((render, response_images))
         except Exception as e:
             if debug:

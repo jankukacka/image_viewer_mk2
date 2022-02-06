@@ -43,7 +43,7 @@ class UnsharpMask(filter.Filter):
         if result is not None:
             return result
         else:
-            self.cache = self.call(img, self.strength, self.kernel_size, self.cutoff_percentile)
+            self.cache = self.call(img, self.strength, self.kernel_size)
             return self.cache
 
     @staticmethod

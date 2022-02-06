@@ -3,11 +3,11 @@
 #  Author: Jan Kukacka
 #  Date: 2/2022
 # ------------------------------------------------------------------------------
-#  Implementation of Frangi filter
+#  Implementation of Vesselness filter
 # ------------------------------------------------------------------------------
 
 import numpy as np
-from skimage.filters import frangi
+from skimage.filters import frangi, meijering
 
 try:
     from . import filter
@@ -55,7 +55,8 @@ class Frangi(filter.Filter):
         img_min, img_max = img.min(), img.max()
 
         sigmas = np.arange(min(scale_min, scale_max), max(scale_min, scale_max), scale_step)
-        norm_img = frangi(img, sigmas=sigmas, alpha=alpha, beta=beta, gamma=gamma, black_ridges=False)
+        # norm_img = frangi(img, sigmas=sigmas, alpha=alpha, beta=beta, gamma=gamma, black_ridges=False)
+        norm_img = meijering(img, sigmas=sigmas, alpha=alpha, black_ridges=False)
 
         norm_min, norm_max = norm_img.min(), norm_img.max()
         scale = (img_max-img_min) / (norm_max-norm_min)

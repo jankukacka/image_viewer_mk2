@@ -36,6 +36,10 @@ def get_filter_widget(filter_name):
         return FrangiConfig
     elif filter_name == 'minmax_norm':
         return MinMaxNormConfig
+    elif filter_name == 'gaussian_blur':
+        return GaussianBlurConfig
+    elif filter_name == 'anisotropic_denoising':
+        return AnisotropicDenoisingConfig
 
 class FilterConfig(tk.Frame):
     def __init__(self, parent, skin, *args, **kwargs):
@@ -144,7 +148,7 @@ class GammaCorrectionConfig(FilterConfig):
 
 class FrangiConfig(FilterConfig):
     name = 'frangi'
-    title = 'Frangi filter'
+    title = 'Vesselness filter'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -158,9 +162,10 @@ class FrangiConfig(FilterConfig):
         self._setup_slider('Sigma min', self.vars['scale_min'], 0.1, 4, 0.1)
         self._setup_slider('Sigma max', self.vars['scale_max'], 0.1, 10, 0.1)
         self._setup_slider('Sigma step', self.vars['scale_step'], 0.1, 4, 0.1)
-        self._setup_slider('Alpha', self.vars['alpha'], 0, 1, 0.1)
-        self._setup_slider('Beta', self.vars['beta'], 0, 1, 0.1)
-        self._setup_slider('Gamma', self.vars['gamma'], 0, 100, 1)
+        ## Sliders for these variables don't seem to play role
+        # self._setup_slider('Alpha', self.vars['alpha'], 0, 1, 0.1)
+        # self._setup_slider('Beta', self.vars['beta'], 0, 1, 0.1)
+        # self._setup_slider('Gamma', self.vars['gamma'], 0, 100, 1)
 
 class MinMaxNormConfig(FilterConfig):
     name = 'minmax_norm'
@@ -178,3 +183,29 @@ class MinMaxNormConfig(FilterConfig):
         self._setup_slider('Clip max', self.vars['in_max'], 0, 1.01, 0.01)
         self._setup_slider('Output min', self.vars['out_min'], 0, 1, 0.01)
         self._setup_slider('Output max', self.vars['out_max'], 0, 1, 0.01)
+
+class GaussianBlurConfig(FilterConfig):
+    name = 'gaussian_blur'
+    title = 'Gaussian blur'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.vars['sigma'] = DoubleVar(value=1)
+        self._setup_slider('Sigma', self.vars['sigma'], 0.1, 4, 0.1)
+
+
+class AnisotropicDenoisingConfig(FilterConfig):
+    name = 'anisotropic_denoising'
+    title = 'Anisotropic denoising'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.vars['step_size'] = DoubleVar(value=0.15)
+        self.vars['sensitivity'] = DoubleVar(value=.1)
+        self.vars['n_iter'] = IntVar(value=10)
+
+        self._setup_slider('Conductivity', self.vars['sensitivity'], 0.01, 1, .01)
+        self._setup_slider('# iterations', self.vars['n_iter'], 1, 20, 1)
+        self._setup_slider('Step size', self.vars['step_size'], 0, .25, 0.01)
