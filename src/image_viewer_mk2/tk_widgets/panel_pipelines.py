@@ -14,9 +14,11 @@ import tkinter.ttk as ttk
 try:
     from . import filter_config
     from . import sortable_accordion
+    from ..utils import event_handler
 except ImportError:
     from tk_widgets import filter_config
     from tk_widgets import sortable_accordion
+    from utils import event_handler
 
 class PanelPipelines(object):
     def __init__(self, parent, skin, var_selected_channel):
@@ -39,11 +41,12 @@ class PanelPipelines(object):
             for filter in channel_prop['pipeline']['filters']:
                 self.create_widget(accordion, filter)
 
-            accordion.pp_observer = lambda e, self=self, accordion=accordion: self.on_sourceupdatded(e, accordion)
+            accordion.pp_observer = event_handler.ObservableEventHandler(self.on_sourceupdatded, accordion=accordion)
             accordion.pp_observer_target = channel_prop['pipeline']['filters']
             channel_prop['pipeline']['filters'].attach(accordion.pp_observer)
 
-            accordion.items.attach(lambda e, filters=channel_prop['pipeline']['filters']: self.update_source(e, filters))
+            handler = event_handler.ObservableEventHandler(self.update_source, source_list=channel_prop['pipeline']['filters'])
+            accordion.items.attach(handler)
             self.accordions.append(accordion)
 
     def create_widget(self, accordion, filter, index=None):
@@ -55,13 +58,19 @@ class PanelPipelines(object):
         widget.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
         widget.populate(filter['params'])
         ## Trigger removing a filter from model
-        widget.btn_remove.command = lambda e, accordion=accordion, filter=filter: accordion.pp_observer_target.pop(accordion.pp_observer_target.index(filter))
+        handler = event_handler.TkEventHandler(self.filterwidget_onremove, accordion=accordion, filter=filter)
+        widget.btn_remove.command = handler
+
+    @staticmethod
+    def filterwidget_onremove(accordion, filter):
+        accordion.pp_observer_target.pop(accordion.pp_observer_target.index(filter))
 
     def on_channel_selected_change(self, channel_index):
         for accordion in self.accordions:
             accordion.pack_forget()
         self.accordions[channel_index].pack(side=tk.TOP, expand=True, fill=tk.BOTH)
 
+    @event_handler.requires('event')
     def on_sourceupdatded(self, event, accordion):
         '''
         Handler of events on model.
@@ -74,7 +83,12 @@ class PanelPipelines(object):
                 accordion.remove_at(event.index)
         elif event.action == 'sorted':
             pass
+        elif event.action == 'itemsUpdated':
+            ## NOTE: changes to source items are handled by the filter config
+            ##       widgets directly
+            pass
 
+    @event_handler.requires('event')
     def update_source(self, event, source_list):
         '''
         Handler of sorting events on child accordions.

@@ -23,11 +23,10 @@ class LocalNorm(filter.Filter):
 
     name = 'local_norm'
 
-    def __init__(self, cutoff_percentile=80, kernel_size=31):
+    def __init__(self, cutoff_percentile=80, kernel_size=10):
         '''
         # Arguments:
-            - kernel_size: size of the averaging kernel or tuple of (kernel_height,
-                kernel_width). Should be odd ints.
+            - kernel_size: sigma of the gaussian kernel.
             - cutoff_percentile: int between 0 and 100. Global percentile cut-off,
                 preventing over-amplification of noise.
         '''
@@ -43,25 +42,35 @@ class LocalNorm(filter.Filter):
             - norm_img: image of the same size as the input img, with values
                 locally normalized.
         '''
-        if not self.active:
-            return img
-        return self.call(img, self.kernel_size, self.cutoff_percentile)
+        result = super().__call__(img)
+        if result is not None:
+            return result
+        else:
+            self.cache = self.call(img, self.kernel_size, self.cutoff_percentile)
+            return self.cache
 
     @staticmethod
     def call(img, kernel_size, cutoff_percentile, **kwargs):
-        kernel_size = hp.misc.ensure_list(kernel_size)
-        if len(kernel_size) == 1:
-            kernel_size = (kernel_size[0], kernel_size[0])
+        ## Compute input range
+        img_min, img_max = img.min(), img.max()
 
-        norm = gaussian_filter(img, [k/3 for k in kernel_size])
+        norm = gaussian_filter(img, kernel_size)
         cutoff = np.max(norm) * np.power(cutoff_percentile/100, 3)
         norm_img = img / np.maximum(norm, cutoff)
         norm_img = np.nan_to_num(norm_img)
 
-        img = (img-img.min())/img.ptp()
-        norm_img = (norm_img-norm_img.min())/norm_img.ptp()
+        ## Ensure norm_img has same scale as input to enable averaging
+        norm_min, norm_max = norm_img.min(), norm_img.max()
+        scale = (img_max-img_min)/(norm_max-norm_min)
+        norm_img = img_min + (norm_img-norm_min)*scale
+        result = img+norm_img
 
-        return (img+norm_img)/2
+        ## Ensure output has same range as input
+        res_min, res_max = result.min(), result.max()
+        scale = (img_max-img_min)/(res_max-res_min)
+        result = img_min + (result-res_min)*scale
+
+        return result
 
 
     def serialize(self):

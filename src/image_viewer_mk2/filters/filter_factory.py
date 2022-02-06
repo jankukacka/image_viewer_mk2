@@ -10,21 +10,31 @@ try:
     from . import local_norm
     from . import sigmoid_norm
     from . import unsharp_mask
+    from . import gamma_correction
+    from . import frangi
+    from . import minmax_norm
 except ImportError:
     from filters import local_norm
     from filters import sigmoid_norm
     from filters import unsharp_mask
+    from filters import gamma_correction
+    from filters import frangi
+    from filters import minmax_norm
+
+__available_filters = (local_norm.LocalNorm,
+                       sigmoid_norm.SigmoidNorm,
+                       unsharp_mask.UnsharpMask,
+                       gamma_correction.GammaCorrection,
+                       frangi.Frangi,
+                       minmax_norm.MinMaxNorm)
 
 def get_filter_by_name(name):
     '''
     Return type matching given name
     '''
-    if name == local_norm.LocalNorm.name:
-        return local_norm.LocalNorm
-    elif name == sigmoid_norm.SigmoidNorm.name:
-        return sigmoid_norm.SigmoidNorm
-    elif name == unsharp_mask.UnsharpMask.name:
-        return unsharp_mask.UnsharpMask
+    for T_filter in __available_filters:
+        if name == T_filter.name:
+            return T_filter
 
 def get_available_filters():
-    return [local_norm.LocalNorm, sigmoid_norm.SigmoidNorm, unsharp_mask.UnsharpMask]
+    return __available_filters

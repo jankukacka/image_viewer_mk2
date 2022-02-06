@@ -16,8 +16,12 @@ from PIL import Image, ImageOps, ImageTk
 
 try:
     from .scrolled_frame import ScrolledFrame
+    from ..utils import event_handler
+    from ..utils.tk_lazy_var import StringVar, BooleanVar
 except ImportError:
     from tk_widgets.scrolled_frame import ScrolledFrame
+    from utils import event_handler
+    from utils.tk_lazy_var import StringVar, BooleanVar
 
 
 def prepare_icon(filename, skin):
@@ -37,7 +41,7 @@ class ChannelsList():
         self.skin = skin
 
         self.var_selected_channel = var_selected_channel
-        self.channel_variables = []
+        self.var_channels = []
         self.mainframe = ttk.LabelFrame(parent_frame, text='Channels', padding=5)
         self.mainframe.pack(side=tk.TOP, expand=False, fill=tk.BOTH, padx=5, pady=5)
 
@@ -81,11 +85,16 @@ class ChannelsList():
 
         self.items_frame = self.wrap_frame.display_widget(tk.Frame, fit_width=True)
 
-        self.var_channels = []
+        while len(self.var_channels) > 0:
+            for var in self.var_channels[0].values():
+                for trace_info in var.trace_vinfo():
+                    var.trace_vdelete(*trace_info)
+            self.var_channels.pop(0)
+
         for channel_prop in channel_props:
-            self.var_channels.append({'color': tk.StringVar(value=channel_prop['color']),
-                                      'visible': tk.BooleanVar(value=channel_prop['visible']),
-                                      'name': tk.StringVar(value='Channel name')})
+            self.var_channels.append({'color': StringVar(value=channel_prop['color']),
+                                      'visible': BooleanVar(value=channel_prop['visible']),
+                                      'name': StringVar(value='Channel name')})
 
         self.color_previews = []
         self.item_frames = []
@@ -109,7 +118,11 @@ class ChannelsList():
 
             self.wrap_frame.bind_scroll_wheel(color_preview)
             self.color_previews.append(color_preview)
-            var_channel['color'].trace('w', lambda _1,_2,_3, obj=color_preview, var=var_channel['color']: obj.config(background=str(var.get())))
+
+            def on_colorchange(obj, var):
+                obj.config(background=str(var.get()))
+            handler = event_handler.TkVarEventHandler(on_colorchange, obj=color_preview, var=var_channel['color'])
+            var_channel['color'].trace('w', handler)
 
             label = tk.Label(frame, textvariable=var_channel['name'], fg=self.skin.fg_color,
                              bg=self.skin.bg_color, anchor=tk.NW)
@@ -118,8 +131,10 @@ class ChannelsList():
             frame.label = label
             self.wrap_frame.bind_scroll_wheel(label)
 
-            frame.bind_class(bind_tag, '<Button-1>', lambda e: self.channel_onselect(e, var_channel['name'].get()))
-            frame.bind_class(bind_tag, '<Double-Button-1>', lambda _, channel_index=channel_index: self.init_rename_channel(channel_index))
+            handler = event_handler.TkEventHandler(self.channel_onselect, var_channel_name=var_channel['name'])
+            frame.bind_class(bind_tag, '<Button-1>', handler)
+            handler = event_handler.TkEventHandler(self.init_rename_channel, channel_index=channel_index)
+            frame.bind_class(bind_tag, '<Double-Button-1>', handler)
 
         for channel_index, var_channel in enumerate(self.var_channels):
             add_channel_entry(channel_index, var_channel)
@@ -138,10 +153,11 @@ class ChannelsList():
         entry.pack(side=tk.LEFT)
         entry.focus_set()
         entry.select_range(0, tk.END)
-        handler = lambda _, frame=frame, entry=entry, channel_index=channel_index: self.end_rename_channel(frame, entry, channel_index)
+        handler = event_handler.TkEventHandler(self.end_rename_channel, frame=frame, entry=entry, channel_index=channel_index)
         entry.bind('<FocusOut>', handler)
         entry.bind('<Return>', handler)
-        entry.bind('<Escape>', lambda _, frame=frame, entry=entry: self.cancel_rename_channel(frame, entry))
+        handler = event_handler.TkEventHandler(self.cancel_rename_channel, frame=frame, entry=entry)
+        entry.bind('<Escape>', handler)
 
     def end_rename_channel(self, frame, entry, channel_index):
         value = entry.get()
@@ -159,9 +175,10 @@ class ChannelsList():
         entry.destroy()
         frame.label.pack(side=tk.LEFT, pady=2, padx=3)
 
-    def channel_onselect(self, event, channel_name):
+    @event_handler.requires('event')
+    def channel_onselect(self, event, var_channel_name):
         event.widget.focus_set()
-        self.var_selected_channel.set(channel_name)
+        self.var_selected_channel.set(var_channel_name.get())
 
     def highlight_item(self, item_index):
         for frame in self.item_frames:

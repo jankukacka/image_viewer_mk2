@@ -39,9 +39,12 @@ class UnsharpMask(filter.Filter):
         # Returns:
             - img: image of the same size as the input img
         '''
-        if not self.active:
-            return img
-        return self.call(img, self.strength, self.kernel_size, self.cutoff_percentile)
+        result = super().__call__(img)
+        if result is not None:
+            return result
+        else:
+            self.cache = self.call(img, self.strength, self.kernel_size, self.cutoff_percentile)
+            return self.cache
 
     @staticmethod
     def call(img, strength, kernel_size, **kwargs):
@@ -62,7 +65,7 @@ class UnsharpMask(filter.Filter):
 
     @staticmethod
     def deserialize(serialization):
-        strength = serialization['stream']
+        strength = serialization['strength']
         kernel_size = serialization['kernel_size']
         obj = UnsharpMask(strength, kernel_size)
         obj._deserialize_parent(serialization)

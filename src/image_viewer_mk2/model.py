@@ -12,6 +12,7 @@ import happy as hp
 from matplotlib.colors import PowerNorm, to_hex
 from multiprocessing import Process, Queue
 from queue import Empty
+from time import time
 
 from PIL import ImageTk, Image
 
@@ -26,6 +27,7 @@ try:
     from .filters.filter_factory import get_filter_by_name
     from .filters.local_norm import LocalNorm
     from .filters.sigmoid_norm import SigmoidNorm
+    from .utils import event_handler
 except ImportError:
     from ObservableCollections.observablelist import ObservableList
     from ObservableCollections.observabledict import ObservableDict
@@ -37,6 +39,7 @@ except ImportError:
     from filters.filter_factory import get_filter_by_name
     from filters.local_norm import LocalNorm
     from filters.sigmoid_norm import SigmoidNorm
+    from utils import event_handler
 
 class Model(Observable):
     '''
@@ -66,7 +69,11 @@ class Model(Observable):
         self.response_images = None
 
         self.channel_props = ObservableList()
-        self.channel_props.attach(lambda e, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props', child=e))
+
+        @event_handler.requires('event')
+        def on_channelprops_changed(event, obj):
+            obj.raiseEvent(name='propertyChanged', propertyName='channel_props', child=event)
+        self.channel_props.attach(event_handler.ObservableEventHandler(on_channelprops_changed, obj=self))
         self.channel_prop_clipboard = None
 
 
@@ -173,8 +180,8 @@ class Model(Observable):
 
         filter_dict = make_observable(filter.serialize())
         self.channel_props[channel_index]['pipeline']['filters'].append(filter_dict)
-        filter_dict['params'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
-        filter_dict['params'].attach(self.update_render)
+        filter_dict['params'].attach(event_handler.ObservableEventHandler(self.raiseEvent, name='propertyChanged', propertyName='channel_props'))
+        filter_dict['params'].attach(event_handler.ObservableEventHandler(self.update_render))
 
     def remove_filter(self, channel_index, filter_index):
         '''
@@ -197,30 +204,20 @@ class Model(Observable):
         for channel in range(n_channels):
             channel_property = {}
             channel_property['name'] = f'Channel {channel}'
-            channel_property['pipeline'] = make_observable(Pipeline([LocalNorm(80,31), SigmoidNorm(0,100,49,51)]).serialize())
-            channel_property['use_local_contrast'] = True
-            channel_property['local_contrast_neighborhood'] = 31
-            channel_property['local_contrast_cut_off'] = 80
-            channel_property['use_gamma'] = True
-            channel_property['gamma'] = 1
-            channel_property['use_sigmoid'] = True
-            channel_property['sigmoid_low'] = 0
-            channel_property['sigmoid_high'] = 100
-            channel_property['sigmoid_new_low'] = 49
-            channel_property['sigmoid_new_high'] = 51
+            channel_property['pipeline'] = make_observable(Pipeline([LocalNorm(80,10), SigmoidNorm(0,100,49,51)]).serialize())
             channel_property['color'] = '#ffffff'
             channel_property['visible'] = True
 
             channel_property = ObservableDict(channel_property)
-            channel_property.attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
-            channel_property.attach(self.update_render)
-            channel_property['pipeline'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
-            channel_property['pipeline'].attach(self.update_render)
-            channel_property['pipeline']['filters'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
-            channel_property['pipeline']['filters'].attach(self.update_render)
+            channel_property.attach(event_handler.ObservableEventHandler(self.raiseEvent, name='propertyChanged', propertyName='channel_props'))
+            channel_property.attach(event_handler.ObservableEventHandler(self.update_render))
+            # channel_property['pipeline'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
+            # channel_property['pipeline'].attach(self.update_render)
+            # channel_property['pipeline']['filters'].attach(event_handler.ObservableEventHandler(self.raiseEvent, name='propertyChanged', propertyName='channel_props'))
+            channel_property['pipeline']['filters'].attach(event_handler.ObservableEventHandler(self.update_render))
             for item in channel_property['pipeline']['filters']:
-                item['params'].attach(lambda x, self=self: self.raiseEvent('propertyChanged', propertyName='channel_props'))
-                item['params'].attach(self.update_render)
+                # item['params'].attach(event_handler.ObservableEventHandler(self.raiseEvent, name='propertyChanged', propertyName='channel_props'))
+                item['params'].attach(event_handler.ObservableEventHandler(self.update_render))
             self.channel_props.append(channel_property)
 
 
@@ -242,6 +239,7 @@ class Model(Observable):
             pass
 
 
+    @event_handler.requires('event')
     def update_render(self, event=None):
         ## Check we have all images
         if self.image is None:
@@ -251,7 +249,6 @@ class Model(Observable):
             return
 
         render_task = {}
-        # render_task['channel_properties'] = [dict(channel_property) for channel_property in self.channel_props]
         render_task['channel_properties'] = make_plain(self.channel_props)
 
         ## If image has changed, pass it to the rendering thread too

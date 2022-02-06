@@ -160,13 +160,17 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
                 image = image_local[...,channel_index]
                 t1 = time()
                 if (channel_index not in pipelines
-                    or channel_property['pipeline'] != pipelines[channel_index]
+                    or pipelines[channel_index].update(channel_property['pipeline'])
                     or channel_property['color'] != colors[channel_index]):
+
+                    if channel_index not in pipelines:
+                        pipelines[channel_index] = Pipeline.deserialize(channel_property['pipeline'])
                     t2 = time()
-                    pipelines[channel_index] = channel_property['pipeline']
-                    colors[channel_index] = channel_property['color']
                     mn,mx = image.min(), image.max()
-                    output_image = Pipeline.call(channel_property['pipeline'], (image-mn)/(mx-mn))
+                    image = (image-mn)/(mx-mn)
+                    output_image = pipelines[channel_index](image)
+                
+                    colors[channel_index] = channel_property['color']
                     cmap = hp.plots.cmap((0,'#444444'),(1/256, 'k'), (1,channel_property['color']))
                     response_image = render_response(image, output_image, cmap)
                     t3 = time()
@@ -176,7 +180,7 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
                 else:
                     t2 = time()
                     output_image, response_image = cache[channel_index]
-                    t3 = time()
+                    t4 = t3 = time()
 
                 time_render += t3-t2
                 time_validation += t2-t1
@@ -192,7 +196,8 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
             render = np.minimum(render, 1) * 255
             render = Image.fromarray(render.astype(np.uint8))
             t6 = time()
-            print(f'Pipeline validation: {time_validation:.3f} Rendering: {time_render:.3f} Coloring: {time_coloring:.3f} Sum: {t6-t5:.3f} Total: {t6-t0:.3f}')
+            if debug:
+                print(f'Pipeline validation: {time_validation:.3f} Rendering: {time_render:.3f} Coloring: {time_coloring:.3f} Sum: {t6-t5:.3f} Total: {t6-t0:.3f}')
             rendered_queue.put((render, response_images))
         except Exception as e:
             if debug:
@@ -208,7 +213,7 @@ def render_response(input_image, output_image, cmap):
     from skimage.transform import resize
     response = np.empty((128,256,4))
     response[:] = cmap(np.linspace(0,1,response.shape[0]))[:,None]
-    hist = np.histogram2d(output_image.ravel(), input_image.ravel(), bins=(64,128))[0]
+    hist = np.histogram2d(output_image.ravel(), input_image.ravel(), bins=(np.linspace(0,1,64),np.linspace(0,1,128)))[0]
     hist = np.log(hist)
     hist = np.nan_to_num(0.5 + 0.5*(hist / hist.max()), neginf=0)
     response[...,-1] = resize(hist, response.shape[:2], preserve_range=True)

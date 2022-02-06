@@ -47,13 +47,17 @@ class SigmoidNorm(filter.Filter):
         # Returns:
             - normalized array.
         '''
-        if not self.active:
-            return img
-        return self.call(img, self.lower, self.upper, self.new_lower, self.new_upper)
+        result = super().__call__(img)
+        if result is not None:
+            return result
+        else:
+            self.cache = self.call(img, self.lower, self.upper, self.new_lower, self.new_upper)
+            return self.cache
 
 
     @staticmethod
     def call(img, lower, upper, new_lower, new_upper, **kwargs):
+        img_min, img_max = img.min(), img.max()
         eps = 1e-8
 
         low = lower/100
@@ -63,9 +67,12 @@ class SigmoidNorm(filter.Filter):
         upper = new_upper/100
         new_low = np.log(eps + lower/(1-lower))  # eps to avoid log(0)
         new_high = np.log(upper/(1-upper+eps))   # eps to avoid division by 0
-        img = (new_high-new_low) * (img-low)/(high-low+eps) + new_low
-        img = 1/(1+np.exp(-img))
-        return (img - img.min()) / img.ptp()
+        norm_img = (new_high-new_low) * (img-low)/(high-low+eps) + new_low
+        norm_img = 1/(1+np.exp(-norm_img))
+
+        norm_min, norm_max = norm_img.min(), norm_img.max()
+        scale = (img_max-img_min) / (norm_max-norm_min)
+        return img_min + (norm_img-norm_min) * scale
 
 
     def serialize(self):

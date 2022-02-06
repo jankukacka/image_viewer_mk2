@@ -36,6 +36,7 @@ try:
     from .tk_widgets import filter_config
     from .tk_widgets import sortable_accordion
     from .filters.filter_factory import get_available_filters
+    from .utils.tk_lazy_var import StringVar, BooleanVar
 except ImportError:
     import skin as skin_
     from tk_widgets.limiter import Limiter
@@ -46,6 +47,7 @@ except ImportError:
     from tk_widgets import filter_config
     from tk_widgets import sortable_accordion
     from filters.filter_factory import get_available_filters
+    from utils.tk_lazy_var import StringVar, BooleanVar
 
 def set_state(element, state):
     try:
@@ -168,24 +170,14 @@ class View(tk.Tk):
         # self.channel_figures = [None,None]
 
         self.var_channel = {
-            'use_local_contrast': tk.BooleanVar(value=True),
-            'local_contrast_neighborhood': tk.IntVar(value=31),
-            'local_contrast_cut_off': tk.DoubleVar(value=100),
-            'use_gamma': tk.BooleanVar(value=True),
-            'gamma': tk.DoubleVar(value=1.0),
-            'use_sigmoid': tk.BooleanVar(value=True),
-            'sigmoid_low': tk.DoubleVar(value=0),
-            'sigmoid_high': tk.DoubleVar(value=100),
-            'sigmoid_new_low': tk.DoubleVar(value=0),
-            'sigmoid_new_high': tk.DoubleVar(value=100),
-            'color': tk.StringVar(value='#000000'),
-            'visible': tk.BooleanVar(value=True)
+            'color': StringVar(value='#000000'),
+            'visible': BooleanVar(value=True)
         }
 
         channel_frame = ttk.LabelFrame(self.grid_frames[2], text='Channel settings', padding=5)
         channel_frame.pack(side=tk.TOP, expand=False, fill=tk.BOTH, padx=5, pady=5)
 
-        self.var_selected_channel = tk.StringVar(value='Channel 0')
+        self.var_selected_channel = StringVar(value='Channel 0')
         self.channel_combo = ttk.Combobox(channel_frame, state='readonly',
                              textvariable=self.var_selected_channel)
         self.channel_combo.pack(side=tk.TOP, expand=False, fill=tk.X)

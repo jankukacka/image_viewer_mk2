@@ -17,12 +17,16 @@ try:
     from ..ObservableCollections.observable import Observable
     from ..ObservableCollections.event import Event
     from .toggle_button import ToggleButton
+    from ..utils import event_handler
+    from ..utils.tk_lazy_var import BooleanVar
 except ImportError:
     from ObservableCollections.observablelist import ObservableList
     from ObservableCollections.observabledict import ObservableDict
     from ObservableCollections.observable import Observable
     from ObservableCollections.event import Event
     from tk_widgets.toggle_button import ToggleButton
+    from utils import event_handler
+    from utils.tk_lazy_var import BooleanVar
 
 class SortableAccordion(tk.Frame):
     '''
@@ -44,7 +48,8 @@ class SortableAccordion(tk.Frame):
     def add(self, item, index=None):
         if index is None:
             index = len(self.items)
-        item.sa_folded = item.folded.trace('w', lambda _1,_2,_3, self=self, item=item: self.item_onchange(item))
+        handler = event_handler.TkVarEventHandler(self.item_onchange, item_trigger=item)
+        item.sa_folded = item.folded.trace('w', handler)
 
         self.items.insert(index, item)
         self.widgets.insert(index, item)
@@ -173,8 +178,8 @@ class AccordionItem(tk.Frame):
                               font=self.skin.font_heading)
         self.title.pack(side=tk.LEFT)
 
-        self.folded = tk.BooleanVar(value=True)
-        self.folded.trace('w', self.fold)
+        self.folded = BooleanVar(value=True)
+        self.folded.trace('w', event_handler.TkVarEventHandler(self.fold))
         image_on = Path(os.path.dirname(os.path.abspath(__file__))).parent/'resources'/'arrow_down16.png'
         image_off = Path(os.path.dirname(os.path.abspath(__file__))).parent/'resources'/'arrow_left16.png'
         self.button_fold = ToggleButton(self.header, image_on=image_on, image_off=image_off, variable=self.folded)
@@ -184,7 +189,7 @@ class AccordionItem(tk.Frame):
 
         parent.add(self, index)
 
-    def fold(self, *args):
+    def fold(self):
         if self.folded.get():
             self.content.pack_forget()
         else:

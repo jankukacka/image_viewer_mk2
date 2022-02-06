@@ -13,9 +13,17 @@ class Filter(object):
 
     def __init__(self):
         self.active = True
+        self.cache = None
 
     def __call__(self, img):
-        raise NotImplementedError()
+        '''
+        Base class call handler. Child classes need to take care of case when
+        this returns None.
+        '''
+        if not self.active:
+            return img
+        if self.cache is not None:
+            return self.cache
 
     def serialize(self):
         return {'name': self.name,
