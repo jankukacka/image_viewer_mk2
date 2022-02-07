@@ -12,10 +12,12 @@ from matplotlib.colors import is_color_like, to_hex
 
 try:
     from . import view as view_
-    from .windnd import hook_dropfiles
+    from .utils.windnd import hook_dropfiles
+    from .utils import event_handler
 except ImportError:
     import view as view_
-    from windnd import hook_dropfiles
+    from utils import event_handler
+    from utils.windnd import hook_dropfiles
 
 class Presenter(object):
     '''
@@ -24,77 +26,69 @@ class Presenter(object):
     def __init__(self, view, model):
         self.view = view
         self.model = model
-        # filename = self.view.asksaveasfilename(title='Save render as...', filetypes=[('Numpy files', '.npy')], initialfile='render.npy')
-
-        ## Init view from model
-        # self.color_onchage()
-        # self.view.var_colorspace.set(self.model.color_space)
-        # for var, color in zip(self.view.var_color, self.model.colors):
-        #     var.set(color)
-        # for obj, var in zip(self.view.color_previews, self.view.var_color):
-        #     obj.config(background=var.get())
-        # cmap2d.plot_cmap(self.model.colormap, self.view.axis_cmap)
-        # self.view.figure_canvas.draw()
 
         ## Define view callbacks
         ## -- Update color previews
-        # for obj, var in zip(self.view.color_previews, self.view.var_color):
-        #     var.trace('w', lambda _1,_2,_3, obj=obj, var=var: self.update_widget_bkg(obj,var))
-        self.view.var_channel['color'].trace('w', lambda _1,_2,_3, obj=self.view.color_preview, var=self.view.var_channel['color']: self.update_widget_bkg(obj,var))
-
-        # ## -- color space changes
-        # self.view.var_colorspace.trace('w', lambda _1,_2,_3, var=view.var_colorspace: self.colorspace_onchange(var))
+        handler = event_handler.TkVarEventHandler(self.update_widget_bkg, obj=self.view.color_preview, var=self.view.var_channel['color'])
+        self.view.var_channel['color'].trace('w', handler)
 
         ## -- Color picker clicks
-        # for btn, var in zip(view.color_pickers, self.view.var_color):
-        self.view.color_picker.config(command=lambda var=self.view.var_channel['color']: self.pick_color(var))
+        handler = event_handler.TkCommandEventHandler(self.pick_color, var=self.view.var_channel['color'])
+        self.view.color_picker.config(command=handler)
 
         ## -- Update colormap preview
-        # for index, var in enumerate(self.view.var_color):
-        self.view.var_channel['color'].trace('w', lambda _1,_2,_3: self.color_onchage())
+        self.view.var_channel['color'].trace('w', event_handler.TkVarEventHandler(self.color_onchage))
 
         ## -- channel property changes
-        self.view.var_selected_channel.trace('w', lambda _1,_2,_3, self=self: self.channel_onchange())
+        self.view.var_selected_channel.trace('w', event_handler.TkVarEventHandler(self.channel_onchange))
         for key,var in self.view.var_channel.items():
-            var.trace('w', lambda _1,_2,_3,var=var,key=key: self.channel_var_onchange(var,key))
-
-        # ## -- image option changes
-        # for key,var in self.view.var_imoptions.items():
-        #     var.trace('w', lambda _1,_2,_3,var=var,key=key: self.imoption_var_onchange(var,key))
+            var.trace('w', event_handler.TkVarEventHandler(self.channel_var_onchange, key=key, var=var))
 
         ## -- channel control buttons
-        self.view.channels_panel.btn_hide_all.config(command=self.hide_all)
-        self.view.channels_panel.btn_show_all.config(command=self.show_all)
+        self.view.channels_panel.btn_hide_all.config(command=event_handler.TkCommandEventHandler(self.hide_all))
+        self.view.channels_panel.btn_show_all.config(command=event_handler.TkCommandEventHandler(self.show_all))
 
         ## -- config saving and loading
-        self.view.btn_save.config(command=self.save_model)
-        self.view.btn_load.config(command=self.load_model)
-        self.view.btn_save_render.config(command=self.save_render)
+        self.view.btn_save.config(command=event_handler.TkCommandEventHandler(self.save_model))
+        self.view.btn_load.config(command=event_handler.TkCommandEventHandler(self.load_model))
+        self.view.btn_save_render.config(command=event_handler.TkCommandEventHandler(self.save_render))
 
         ## -- config copying and pasting
-        self.view.btn_paste.config(command=lambda: self.model.paste_params(self.view.get_active_channel()))
-        self.view.btn_copy.config(command=lambda: self.model.copy_params(self.view.get_active_channel()))
+        def paste_params(obj):
+            obj.model.paste_params(obj.view.get_active_channel())
+        self.view.btn_paste.config(command=event_handler.TkCommandEventHandler(paste_params, obj=self))
+        def copy_params(obj):
+            obj.model.copy_params(obj.view.get_active_channel())
+        self.view.btn_copy.config(command=event_handler.TkCommandEventHandler(copy_params, obj=self))
 
         ## -- clipboard
-        self.view.bind('<Control-c>', self.render_to_clipboard)
-        self.view.bind('<Control-s>', self.save_render)
-        self.view.bind('<Control-o>', self.load_image)
-        self.view.bind('<Control-t>', lambda _: self.model.transpose_image())
+        self.view.bind('<Control-c>', event_handler.TkEventHandler(self.render_to_clipboard))
+        self.view.bind('<Control-s>', event_handler.TkEventHandler(self.save_render))
+        self.view.bind('<Control-o>', event_handler.TkEventHandler(self.load_image))
+        self.view.bind('<Control-t>', event_handler.TkEventHandler(self.model.transpose_image))
 
         ## -- bind menu commands
-        self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['load_image'], command=self.load_image)
-        self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['save_render'], command=self.save_render)
-        self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['save_config'], command=self.save_model)
-        self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['load_config'], command=self.load_model)
-        self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['transpose'], command=self.model.transpose_image)
-        self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['autocolor'], command=self.model.autocolor)
+        self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['load_image'], command=event_handler.TkCommandEventHandler(self.load_image))
+        self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['save_render'], command=event_handler.TkCommandEventHandler(self.save_render))
+        self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['save_config'], command=event_handler.TkCommandEventHandler(self.save_model))
+        self.view.menu['file']['obj'].entryconfig(self.view.menu['file']['load_config'], command=event_handler.TkCommandEventHandler(self.load_model))
+        self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['transpose'], command=event_handler.TkCommandEventHandler(self.model.transpose_image))
+        self.view.menu['image']['obj'].entryconfig(self.view.menu['image']['autocolor'], command=event_handler.TkCommandEventHandler(self.model.autocolor))
 
+        ## -- adding filters
+        for key, val in self.view.menu_add_filter.items():
+            if key == 'obj': continue
+            def add_filter(filter):
+                self.model.add_filter(self.view.get_active_channel(), filter_name=filter)
+            self.view.menu_add_filter['obj'].entryconfig(
+                self.view.menu_add_filter[key],
+                command=event_handler.TkCommandEventHandler(add_filter, filter=key))
 
         ## -- on closing
         # self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         ## Define model callbacks
-        self.model.attach(self.model_onchange)
+        self.model.attach(event_handler.ObservableEventHandler(self.model_onchange))
 
         ## Hook on model rendering updates
         self.check_model_for_render()
@@ -107,10 +101,10 @@ class Presenter(object):
         for i,var_channel in enumerate(self.view.channels_panel.var_channels):
             for key,var in var_channel.items():
                 # if key != 'name':  ## Name has a seperate handling mechanism
-                var.trace('w', lambda _1,_2,_3,var=var,key=key,cindex=i: self.channel_var_onchange(var,key,cindex))
+                var.trace('w', event_handler.TkVarEventHandler(self.channel_var_onchange, var=var,key=key,cindex=i))
 
         for i, color_preview in enumerate(self.view.channels_panel.color_previews):
-            color_preview.bind('<Double-Button-1>', lambda _, var=self.view.channels_panel.var_channels[i]['color']: self.pick_color(var))
+            color_preview.bind('<Double-Button-1>', event_handler.TkEventHandler(self.pick_color, var=self.view.channels_panel.var_channels[i]['color']))
 
 
     def check_model_for_render(self):
@@ -124,7 +118,7 @@ class Presenter(object):
         else:
             self.view.loader.hide()
 
-
+    @event_handler.requires('event')
     def model_onchange(self, event):
         '''
         Propagates changes in the model to the view.
@@ -132,25 +126,9 @@ class Presenter(object):
         if event.action == 'ioTask':
             self.view.loader.show()
             self.check_model_for_io()
-        if event.action == 'propertyChanged':
-            # if event.propertyName == 'colors':
-            #     channel_index = self.view.get_active_channel()
-            #     self.view.var_channel['color'].set(self.model.colors[channel_index])
-                # for var, color in zip(self.view.var_color, self.model.colors):
-                #     var.set(color)
-            # if event.propertyName == 'colormap':
-            #     self.update_colormap()
-            # if event.propertyName == 'color_space':
-            #     self.view.var_colorspace.set(self.model.color_space)
-            # if event.propertyName == 'channel_properties':
-            #     for i, channel_property in enumerate(self.model.channel_properties):
-            #         for key, val in channel_property.items():
-            #             self.view.var_channel[i][key].set(val)
-            #             if key in self.view.property_frames[i]:
-            #                 view_.set_state(self.view.property_frames[i][key], 'normal' if val else 'disable')
 
+        if event.action == 'propertyChanged':
             if event.propertyName == 'channel_props':
-                # print(event)
                 if hasattr(event, 'child'):
                     if event.child.action == 'itemsAdded' or event.child.action == 'itemsRemoved':
                         self.view.update_channels(self.model.channel_props)
@@ -160,19 +138,6 @@ class Presenter(object):
                 active_channel = self.view.get_active_channel()
                 if active_channel < len(self.model.channel_props):
                     self.channel_onchange()
-                    # channel_property = self.model.channel_props[active_channel]
-                    # for key, val in channel_property.items():
-                    #     if key in self.view.var_channel:
-                    #         self.view.var_channel[key].set(val)
-                    #     if key in self.view.property_frames:
-                    #         view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
-
-            if event.propertyName == 'imoptions':
-                for key, val in self.model.imoptions.items():
-                    self.view.var_imoptions[key].set(val)
-                    if key in self.view.imoption_frames:
-                        view_.set_state(self.view.imoption_frames[key], 'normal' if val else 'disable')
-
             if event.propertyName == 'render':
                 if self.model.render is not None:
                     self.view.show_image(self.model.render)
@@ -248,6 +213,10 @@ class Presenter(object):
                 view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
 
         self.view.channels_panel.highlight_item(channel_index)
+        self.view.pipelines_panel.on_channel_selected_change(channel_index)
+        if self.model.response_images is not None:
+            self.view.show_response(self.model.response_images[channel_index])
+
 
     def color_onchage(self):
         channel_index = self.view.get_active_channel()
@@ -261,19 +230,6 @@ class Presenter(object):
             cindex = self.view.get_active_channel()
         self.model.channel_props[cindex][key] = var.get()
 
-    def imoption_var_onchange(self, var, key):
-        self.model.imoptions[key] = var.get()
-
-    def update_colormap(self):
-        pass
-        # x = self.model.responses[0][1]
-        # y = self.model.responses[1][1]
-        # xx,yy = np.meshgrid(x,y)
-        # coords = np.stack([xx,yy], axis=-1)
-        # preview = self.model.colormap(coords)
-        # self.view.axis_cmap.imshow(preview)
-        # # cmap2d.plot_cmap(self.model.colormap, self.view.axis_cmap)
-        # self.view.figure_cmap_canvas.draw()
 
     @staticmethod
     def update_widget_bkg(obj,var):
