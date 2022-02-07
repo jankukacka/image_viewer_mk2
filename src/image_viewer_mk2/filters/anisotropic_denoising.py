@@ -4,6 +4,8 @@
 #  Date: 2/2022
 # ------------------------------------------------------------------------------
 #  Implementation of anisotropic denoising
+#  Based on code by Alistair Muldal (c) 2012
+#      - source: https://pastebin.com/sBsPX4Y7
 # ------------------------------------------------------------------------------
 
 import numpy as np
@@ -76,8 +78,32 @@ class AnisotropicDenoising(filter.Filter):
         obj._deserialize_parent(serialization)
         return obj
 
+# ------------------------------------------------------------------------------
+#  Based on code by Alistair Muldal (c) 2012
+#      - source: https://pastebin.com/sBsPX4Y7
 
-# from scipy.ndimage.filters as flt
+# Original work: Copyright (c) 1995-2012 Peter Kovesi pk@peterkovesi.com
+# Modified work: Copyright (c) 2012 Alistair Muldal
+# Modified work: Copyright (c) 2022 Jan Kukacka
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# The software is provided "as is", without warranty of any kind, express or
+# implied, including but not limited to the warranties of merchantability,
+# fitness for a particular purpose and noninfringement. In no event shall the
+# authors or copyright holders be liable for any claim, damages or other
+# liability, whether in an action of contract, tort or otherwise, arising from,
+# out of or in connection with the software or the use or other dealings in the
+# software.
+
 from scipy.ndimage import gaussian_filter
 
 def anisodiff(img, gamma=0.1, kappa=50, niter=1, sigma=0, option=1):
@@ -158,3 +184,5 @@ def anisodiff(img, gamma=0.1, kappa=50, niter=1, sigma=0, option=1):
         imgout += gamma*(NS+EW)
 
     return imgout
+
+# ------------------------------------------------------------------------------

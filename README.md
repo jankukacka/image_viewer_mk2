@@ -7,16 +7,18 @@ Viewer for spectral images, in particular suitable from multispectral optoacoust
 ## Installation
 
 ```
-pip install image-viewer-mk2
+pip install image-viewer-mk2==1.0.0b2
 ```
 
-Additional dependencies must be installed separately: `happy` (currently not publicly available), optional: `PyTorch` (for GPU-based rendering), `pywin32` (Windows clipboard functionality)
+Additional dependencies must be installed separately: `happy` (currently not publicly available), optional:  `pywin32` (Windows clipboard functionality)
+
+See [releases](https://github.com/jankukacka/image_viewer_mk2/releases) for older versions.
 
 ## Usage
 
 **From command line as a standalone application.**
 ```
-> imvmk2 [-i filename] [-c config_filename] [-g (GPU) | -ng (No GPU)] [-d (debug)]
+> imvmk2 [-i filename] [-c config_filename] [-d (debug)]
 ```
 
 **From within python scripts and interactive sessions.** The viewer can be either used as an interactive image viewer, giving the user the ability to manually adjust the settings. The rendered image is returned back so that it can be further used inside the script.
@@ -46,7 +48,7 @@ TclError: image "pyimageXX" doesn't exist
 When using in interactive session, all other matplotlib figures have to be closed.
 
 ## Credits
-This software reuses code and icons produced by: cilame, Benjamin Johnson, Remin Emonet, [Icon home](https://www.flaticon.com/authors/icon-home), [Gregor Cresnar](https://www.flaticon.com/authors/gregor-cresnar), [Freepik](https://www.flaticon.com/authors/Freepik), [Google](https://www.flaticon.com/authors/google), Uptal Barman, [Arkinasi](https://www.flaticon.com/authors/arkinasi), [Royyan Wijaya](https://www.flaticon.com/authors/royyan-wijaya), and Pancracysdh.
+This software reuses code and icons produced by: Alistair Muldal, cilame, Benjamin Johnson, Remin Emonet, [Icon home](https://www.flaticon.com/authors/icon-home), [Gregor Cresnar](https://www.flaticon.com/authors/gregor-cresnar), [Freepik](https://www.flaticon.com/authors/Freepik), [Google](https://www.flaticon.com/authors/google), Uptal Barman, [Arkinasi](https://www.flaticon.com/authors/arkinasi), [Royyan Wijaya](https://www.flaticon.com/authors/royyan-wijaya), and Pancracysdh.
 
 ## License
 
@@ -55,5 +57,5 @@ The software is provided under the [MIT open license](LICENSE.txt).
 ## Citation
 If you use this software for your research, please cite it as:
 ```
-Kukačka, Jan (2021). Image Viewer MK2 (v0.2.4) [Computer software]. https://github.com/jankukacka/image_viewer_mk2
+Kukačka, Jan (2021). Image Viewer MK2 (v1.0.0) [Computer software]. https://github.com/jankukacka/image_viewer_mk2
 ```

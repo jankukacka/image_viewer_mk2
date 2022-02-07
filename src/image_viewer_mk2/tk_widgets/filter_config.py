@@ -128,11 +128,11 @@ class UnsharpMaskConfig(FilterConfig):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.vars['kernel_size'] = DoubleVar(value=31)
-        self.vars['strength'] = DoubleVar(value=100)
+        self.vars['kernel_size'] = DoubleVar(value=1)
+        self.vars['strength'] = DoubleVar(value=1)
 
-        self._setup_slider('Radius', self.vars['kernel_size'], 0.001, 10, 0.1)
-        self._setup_slider('Strength', self.vars['strength'], -10, 10, 0.1)
+        self._setup_slider('Radius', self.vars['kernel_size'], 0.1, 10, 0.1)
+        self._setup_slider('Strength', self.vars['strength'], 0, 10, 0.1)
 
 
 class GammaCorrectionConfig(FilterConfig):
@@ -208,4 +208,5 @@ class AnisotropicDenoisingConfig(FilterConfig):
 
         self._setup_slider('Conductivity', self.vars['sensitivity'], 0.01, 1, .01)
         self._setup_slider('# iterations', self.vars['n_iter'], 1, 20, 1)
-        self._setup_slider('Step size', self.vars['step_size'], 0, .25, 0.01)
+        ## Step size slides is hidden
+        # self._setup_slider('Step size', self.vars['step_size'], 0, .25, 0.01)
