@@ -367,4 +367,8 @@ def load_image_internal(filename):
     if image.ndim == 2:
         image = image[...,None]
 
+    ## Automatically interpret shortest axis as channels
+    if np.argmin(image.shape) != 2:
+        image = np.swapaxes(image, np.argmin(image.shape), 2)
+
     return image

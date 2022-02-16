@@ -9,7 +9,6 @@
 # ------------------------------------------------------------------------------
 
 import numpy as np
-from cv2.ximgproc import anisotropicDiffusion
 
 try:
     from . import filter
