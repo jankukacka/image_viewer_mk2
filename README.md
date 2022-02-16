@@ -7,7 +7,7 @@ Viewer for spectral images, in particular suitable from multispectral optoacoust
 ## Installation
 
 ```
-pip install image-viewer-mk2==1.0.0b2
+pip install image-viewer-mk2==1.0.0b3
 ```
 
 See [dependencies](https://github.com/jankukacka/image_viewer_mk2/blob/master/dependencies.md) for versions of dependency libraries that were tested with this software but are not strictly required during installation.
