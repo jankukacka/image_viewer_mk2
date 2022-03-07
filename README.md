@@ -1,4 +1,4 @@
-# Image viewer mk2
+# Image viewer Mk2
 Viewer for spectral images, in particular suitable from multispectral optoacoustic tomography.
 
 ![Screenshot of the image viewer.](doc/screenshot.png)
@@ -7,7 +7,7 @@ Viewer for spectral images, in particular suitable from multispectral optoacoust
 ## Installation
 
 ```
-pip install image-viewer-mk2==1.0.0b3
+pip install image-viewer-mk2==1.0.0
 ```
 
 See [dependencies](https://github.com/jankukacka/image_viewer_mk2/blob/master/dependencies.md) for versions of dependency libraries that were tested with this software but are not strictly required during installation.
@@ -21,7 +21,7 @@ See [releases](https://github.com/jankukacka/image_viewer_mk2/releases) for olde
 ```
 
 **From within python scripts and interactive sessions.** The viewer can be either used as an interactive image viewer, giving the user the ability to manually adjust the settings. The rendered image is returned back so that it can be further used inside the script.
-```
+```python
 import image_viewer_mk2.app as imv
 
 img = np.zeros((height, width, channels))
@@ -29,7 +29,7 @@ render = imv.start(image=img)
 ```
 
 Alternatively, it can be used to apply existing configuration and directly return a rendered image without opening the interactive GUI:
-```
+```python
 import image_viewer_mk2.app as imv
 
 img = np.zeros((height, width, channels))
@@ -50,7 +50,6 @@ When using in interactive session, all other matplotlib figures have to be close
 This software reuses code and icons produced by: Alistair Muldal, cilame, Benjamin Johnson, Remin Emonet, [Icon home](https://www.flaticon.com/authors/icon-home), [Gregor Cresnar](https://www.flaticon.com/authors/gregor-cresnar), [Freepik](https://www.flaticon.com/authors/Freepik), [Google](https://www.flaticon.com/authors/google), Uptal Barman, [Arkinasi](https://www.flaticon.com/authors/arkinasi), [Royyan Wijaya](https://www.flaticon.com/authors/royyan-wijaya), and Pancracysdh.
 
 ## License
-
 The software is provided under the [MIT open license](LICENSE.txt).
 
 ## Citation
