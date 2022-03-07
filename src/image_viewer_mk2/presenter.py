@@ -259,12 +259,17 @@ class Presenter(object):
         for i in range(len(self.model.channel_props)):
             self.model.channel_props[i]['visible'] = True
 
-    def render_to_clipboard(self, _):
+    def render_to_clipboard(self):
         '''
         Code from https://stackoverflow.com/a/62007792/2042751
         '''
+        try:
+            import win32clipboard
+        except ImportError:
+            print('Cannot import win32clipboard. Copy to clipboard not available.')
+            return
+
         from io import BytesIO
-        import win32clipboard
         from PIL import Image
 
         def send_to_clipboard(clip_type, data):
