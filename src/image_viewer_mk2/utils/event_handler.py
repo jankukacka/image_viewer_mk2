@@ -6,8 +6,10 @@
 #  Classes for event handling and monitoring event flow in the app
 # ------------------------------------------------------------------------------
 
-from functools import wraps
 from time import time
+from functools import wraps
+from operator import attrgetter
+from happy.misc import ensure_list
 
 show_events = False
 event_depth = 0
@@ -56,10 +58,35 @@ class TkVarEventHandler(EventHandler):
 
 
 class ObservableEventHandler(EventHandler):
-    def __init__(self, func, **kwargs):
+    def __init__(self, func, filter_=None, **kwargs):
+        '''
+        Initializes handler for events from Observable objects
+
+        # Arguments:
+            - func: callable that handles the event
+            - filter_: (optional) Dict with keys to match event attributes. Values
+                can be strings or lists of strings. Events not matching
+                the given strings will be ignored.
+        '''
         super().__init__(func, **kwargs)
+        if filter_ is not None:
+            self.filter = {key: ensure_list(val) for key,val in filter_.items()}
+        else:
+            self.filter = None
+
 
     def __call__(self, event):
+        if self.filter is not None:
+            try:
+                for attr, values in self.filter.items():
+                    for value in values:
+                        if attrgetter(attr)(event) == value:
+                            break
+                    else:
+                        return
+            except AttributeError:
+                return
+
         event_details = f'source = {event.source}, action = {event.action}'
         if event.action == 'propertyChanged' and hasattr(event, 'propertyName'):
             event_details += f'[{event.propertyName}]'
@@ -68,7 +95,7 @@ class ObservableEventHandler(EventHandler):
                 super().__call__(event, event_details=event_details, **self.func_kwargs)
             else:
                 super().__call__(event_details=event_details,**self.func_kwargs)
-        except Exception as e:
+        except AttributeError:
             super().__call__(event_details=event_details,**self.func_kwargs)
 
 
@@ -90,7 +117,7 @@ class TkEventHandler(EventHandler):
                 super().__call__(event, event_details=event_details, **self.func_kwargs)
             else:
                 super().__call__(event_details=event_details, **self.func_kwargs)
-        except Exception as e:
+        except AttributeError:
             super().__call__(event_details=event_details, **self.func_kwargs)
 
 

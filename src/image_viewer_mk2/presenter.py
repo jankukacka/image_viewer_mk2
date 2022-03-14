@@ -36,7 +36,11 @@ class Presenter(object):
         handler = event_handler.TkCommandEventHandler(self.pick_color, var=self.view.var_channel['color'])
         self.view.color_picker.config(command=handler)
 
-        ## -- Update colormap preview
+        ## -- Channels list - color picker
+        self.view.channels_panel.attach(event_handler.ObservableEventHandler(self.pick_color_event,
+                                                                             filter_={'action': 'color_preview_onclick'}))
+
+        ## -- Update color preview
         self.view.var_channel['color'].trace('w', event_handler.TkVarEventHandler(self.color_onchage))
 
         ## -- channel property changes
@@ -87,24 +91,31 @@ class Presenter(object):
         ## -- on closing
         # self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        ## Define model callbacks
-        self.model.attach(event_handler.ObservableEventHandler(self.model_onchange))
+        ## Attach model callbacks
+        self.model.channel_props.attach(event_handler.ObservableEventHandler(
+            self.view.channels_panel.on_channels_updated,
+            filter_={'action':['itemsAdded', 'itemsRemoved']}))
+        self.model.channel_props.attach(event_handler.ObservableEventHandler(
+            self.view.pipelines_panel.on_channels_updated,
+            filter_={'action':['itemsAdded', 'itemsRemoved']}))
+        self.model.channel_props.attach(event_handler.ObservableEventHandler(
+            self.view.update_channels, channel_props=self.model.channel_props,
+            filter_={'action':['itemsAdded', 'itemsRemoved']}))
+
+        self.model.attach(event_handler.ObservableEventHandler(
+            self.model_onioTask, filter_={'action':'ioTask'}))
+
+        self.model.attach(event_handler.ObservableEventHandler(
+            self.model_onrender, filter_={'propertyName':'render'}))
+
+        self.model.attach(event_handler.ObservableEventHandler(
+            self.model_onchannelpropschange, filter_={'propertyName':'channel_props'}))
 
         ## Hook on model rendering updates
         self.check_model_for_render()
 
         ## Hook drag'n'drop files
         hook_dropfiles(self.view, self.drag_file)
-
-    def register_channel_panel_handlers(self):
-        ## Register handlers on variables of channels panel
-        for i,var_channel in enumerate(self.view.channels_panel.var_channels):
-            for key,var in var_channel.items():
-                # if key != 'name':  ## Name has a seperate handling mechanism
-                var.trace('w', event_handler.TkVarEventHandler(self.channel_var_onchange, var=var,key=key,cindex=i))
-
-        for i, color_preview in enumerate(self.view.channels_panel.color_previews):
-            color_preview.bind('<Double-Button-1>', event_handler.TkEventHandler(self.pick_color, var=self.view.channels_panel.var_channels[i]['color']))
 
 
     def check_model_for_render(self):
@@ -118,33 +129,25 @@ class Presenter(object):
         else:
             self.view.loader.hide()
 
-    @event_handler.requires('event')
-    def model_onchange(self, event):
-        '''
-        Propagates changes in the model to the view.
-        '''
-        if event.action == 'ioTask':
-            self.view.loader.show()
-            self.check_model_for_io()
+    def model_onioTask(self):
+        self.view.loader.show()
+        self.check_model_for_io()
 
-        if event.action == 'propertyChanged':
-            if event.propertyName == 'channel_props':
-                if hasattr(event, 'child'):
-                    if event.child.action == 'itemsAdded' or event.child.action == 'itemsRemoved':
-                        self.view.update_channels(self.model.channel_props)
-                        self.register_channel_panel_handlers()
+    def model_onrender(self):
+        if self.model.render is not None:
+            self.view.show_image(self.model.render)
 
-                self.view.channels_panel.update_vars(self.model.channel_props)
-                active_channel = self.view.get_active_channel()
-                if active_channel < len(self.model.channel_props):
-                    self.channel_onchange()
-            if event.propertyName == 'render':
-                if self.model.render is not None:
-                    self.view.show_image(self.model.render)
+        if self.model.response_images is not None:
+            channel_index = self.view.get_active_channel()
+            self.view.show_response(self.model.response_images[channel_index])
 
-                if self.model.response_images is not None:
-                    channel_index = self.view.get_active_channel()
-                    self.view.show_response(self.model.response_images[channel_index])
+    def model_onchannelpropschange(self):
+        ## TODO: This could probably be simplified and made more efficient
+        self.view.channels_panel.update_vars(self.model.channel_props)
+        ## TODO: This could be bound to itemsRemoved only
+        active_channel = self.view.get_active_channel()
+        if active_channel < len(self.model.channel_props):
+            self.channel_onchange()
 
 
     def save_model(self):
@@ -249,8 +252,13 @@ class Presenter(object):
         except:
             pass
 
+    @event_handler.requires('event')
+    def pick_color_event(self, event):
+        self.pick_color(event.var)
+
     def hide_all(self, *_):
         cindex = self.view.get_active_channel()
+        self.model.channel_props[cindex]['visible'] = True
         for i in range(len(self.model.channel_props)):
             if i != cindex:
                 self.model.channel_props[i]['visible'] = False

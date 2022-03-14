@@ -285,8 +285,6 @@ class View(tk.Tk):
 
     def update_channels(self, channel_props):
         self.channel_combo.configure(values=[cp['name'] for cp in channel_props])
-        self.channels_panel.recreate_items(channel_props)
-        self.pipelines_panel.recreate_items(channel_props)
 
     def get_active_channel(self):
         channel_names = [vc['name'].get() for vc in self.channels_panel.var_channels]

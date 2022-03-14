@@ -171,12 +171,25 @@ class ScrolledFrame(tk.Frame):
         widget.bind("<Right>",
                     lambda event: self._canvas.xview_scroll(1, "units"))
 
+    __bindings = {}
     def bind_scroll_wheel(self, widget):
         """Bind the specified widget's mouse scroll event to the canvas."""
+        if widget in self.__bindings:
+            return
+        self.__bindings[widget] = (
+            widget.bind("<MouseWheel>", self._scroll_canvas),
+            widget.bind("<Button-4>", self._scroll_canvas),
+            widget.bind("<Button-5>", self._scroll_canvas)
+        )
 
-        widget.bind("<MouseWheel>", self._scroll_canvas)
-        widget.bind("<Button-4>", self._scroll_canvas)
-        widget.bind("<Button-5>", self._scroll_canvas)
+    def unbind_scroll_wheel(self, widget):
+        """Unbind the specified widget's mouse scroll event to the canvas."""
+        if widget in self.__bindings:
+            bindings = self.__bindings[widget]
+            widget.unbind("<MouseWheel>", bindings[0])
+            widget.unbind("<Button-4>", bindings[1])
+            widget.unbind("<Button-5>", bindings[2])
+
 
     def cget(self, key):
         """Return the resource value for a KEY given as string."""

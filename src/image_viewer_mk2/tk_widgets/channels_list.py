@@ -16,10 +16,12 @@ from PIL import Image, ImageOps, ImageTk
 
 try:
     from .scrolled_frame import ScrolledFrame
+    from ..ObservableCollections.observable import Observable
     from ..utils import event_handler
     from ..utils.tk_lazy_var import StringVar, BooleanVar
 except ImportError:
     from tk_widgets.scrolled_frame import ScrolledFrame
+    from ObservableCollections.observable import Observable
     from utils import event_handler
     from utils.tk_lazy_var import StringVar, BooleanVar
 
@@ -35,13 +37,18 @@ def prepare_icon(filename, skin):
     icon = ImageTk.PhotoImage(icon)
     return icon
 
-class ChannelsList():
+class ChannelsList(Observable):
 
     def __init__(self, parent_frame, skin, var_selected_channel):
+        super().__init__()
+
         self.skin = skin
 
         self.var_selected_channel = var_selected_channel
         self.var_channels = []
+        self.color_previews = []
+        self.item_frames = []
+
         self.mainframe = ttk.LabelFrame(parent_frame, text='Channels', padding=5)
         self.mainframe.pack(side=tk.TOP, expand=False, fill=tk.BOTH, padx=5, pady=5)
 
@@ -67,77 +74,101 @@ class ChannelsList():
         self.wrap_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=0)
         self.wrap_frame.bind_scroll_wheel(self.mainframe)
         self.wrap_frame.bind_scroll_wheel(self.wrap_frame)
-
-        self.item_frame = None
+        self.items_frame = self.wrap_frame.display_widget(tk.Frame, fit_width=True)
 
         footer_frame = tk.Frame(self.mainframe, bg=self.skin.bg_color)
         footer_frame.pack(side=tk.BOTTOM, expand=True, fill=tk.BOTH, padx=0, pady=0)
-        self.btn_hide_all = ttk.Button(footer_frame, text='Hide all')
+        self.btn_hide_all = ttk.Button(footer_frame, text='Hide all other', width=22)
         self.btn_hide_all.pack(side=tk.LEFT, expand=False, padx=5, pady=5)
         self.btn_show_all = ttk.Button(footer_frame, text='Show all')
         self.btn_show_all.pack(side=tk.LEFT, expand=False, pady=5)
 
 
-    def recreate_items(self, channel_props):
-        if self.item_frame is not None:
-            self.item_frame.destroy()
-            self.item_frame = None
+    @event_handler.requires('event')
+    def on_channels_updated(self, event):
+        if event.action == 'itemsAdded':
+            for i,item in enumerate(event.items):
+                self.add_channel(channel_prop=item, channel_index=event.index+i)
+        elif event.action == 'itemsRemoved':
+            for item in event.items:
+                self.remove_channel(event.index)
 
-        self.items_frame = self.wrap_frame.display_widget(tk.Frame, fit_width=True)
+    @staticmethod
+    def channel_var_onchange(model, var, key):
+        model[key] = var.get()
 
-        while len(self.var_channels) > 0:
-            for var in self.var_channels[0].values():
-                for trace_info in var.trace_vinfo():
-                    var.trace_vdelete(*trace_info)
-            self.var_channels.pop(0)
+    def color_preview_onclick(self, var):
+        self.raiseEvent('color_preview_onclick', var=var)
 
-        for channel_prop in channel_props:
-            self.var_channels.append({'color': StringVar(value=channel_prop['color']),
-                                      'visible': BooleanVar(value=channel_prop['visible']),
-                                      'name': StringVar(value='Channel name')})
+    def add_channel(self, channel_prop, channel_index):
+        var_channel = {'color': StringVar(value=channel_prop['color']),
+                       'visible': BooleanVar(value=channel_prop['visible']),
+                       'name': StringVar(value=channel_prop['name'])}
+        for key,var in var_channel.items():
+            var.trace('w', event_handler.TkVarEventHandler(self.channel_var_onchange, model=channel_prop, var=var, key=key))
 
-        self.color_previews = []
-        self.item_frames = []
-        def add_channel_entry(channel_index, var_channel):
-            bind_tag = f'ChannelSelect{channel_index}'
-            frame = tk.Frame(self.items_frame, bg=self.skin.bg_color)
-            frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=0)
-            frame.bindtags((bind_tag,) + frame.bindtags())
-            self.wrap_frame.bind_scroll_wheel(frame)
-            self.item_frames.append(frame)
+        self.var_channels.insert(channel_index, var_channel)
 
-            frame.checkbox = ttk.Checkbutton(frame, text='', variable=var_channel['visible'],
-                                             onvalue=True, offvalue=False)
-            frame.checkbox.pack(side=tk.LEFT, expand=False, pady=2, padx=3)
-            self.wrap_frame.bind_scroll_wheel(frame.checkbox)
-            frame.checkbox.bindtags((bind_tag,) + frame.checkbox.bindtags())
+        bind_tag = f'ChannelSelect{channel_index}'
+        frame = tk.Frame(self.items_frame, bg=self.skin.bg_color)
+        frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=0)
+        frame.bind_tag = bind_tag
+        frame.bindtags((bind_tag,) + frame.bindtags())
+        self.wrap_frame.bind_scroll_wheel(frame)
+        self.item_frames.insert(channel_index, frame)
 
-            color_preview = tk.Frame(frame, width=16, height=16, bg=var_channel['color'].get(), highlightthickness=1, highlightbackground='#000000')
-            color_preview.pack(side=tk.LEFT)
-            color_preview.bindtags((bind_tag,) + color_preview.bindtags())
+        frame.checkbox = ttk.Checkbutton(frame, text='', variable=var_channel['visible'],
+                                         onvalue=True, offvalue=False)
+        frame.checkbox.pack(side=tk.LEFT, expand=False, pady=2, padx=3)
+        self.wrap_frame.bind_scroll_wheel(frame.checkbox)
+        frame.checkbox.bindtags((bind_tag,) + frame.checkbox.bindtags())
 
-            self.wrap_frame.bind_scroll_wheel(color_preview)
-            self.color_previews.append(color_preview)
+        color_preview = tk.Frame(frame, width=16, height=16, bg=var_channel['color'].get(), highlightthickness=1, highlightbackground='#000000')
+        color_preview.ondblclick = color_preview.bind('<Double-Button-1>', event_handler.TkEventHandler(self.color_preview_onclick, var=var_channel['color']))
+        color_preview.pack(side=tk.LEFT)
+        color_preview.bindtags((bind_tag,) + color_preview.bindtags())
 
-            def on_colorchange(obj, var):
-                obj.config(background=str(var.get()))
-            handler = event_handler.TkVarEventHandler(on_colorchange, obj=color_preview, var=var_channel['color'])
-            var_channel['color'].trace('w', handler)
+        self.wrap_frame.bind_scroll_wheel(color_preview)
+        self.color_previews.insert(channel_index, color_preview)
 
-            label = tk.Label(frame, textvariable=var_channel['name'], fg=self.skin.fg_color,
-                             bg=self.skin.bg_color, anchor=tk.NW)
-            label.pack(side=tk.LEFT, pady=2, padx=3)
-            label.bindtags((bind_tag,) + label.bindtags())
-            frame.label = label
-            self.wrap_frame.bind_scroll_wheel(label)
+        def on_colorchange(obj, var):
+            obj.config(background=str(var.get()))
+        handler = event_handler.TkVarEventHandler(on_colorchange, obj=color_preview, var=var_channel['color'])
+        var_channel['color'].trace('w', handler)
 
-            handler = event_handler.TkEventHandler(self.channel_onselect, var_channel_name=var_channel['name'])
-            frame.bind_class(bind_tag, '<Button-1>', handler)
-            handler = event_handler.TkEventHandler(self.init_rename_channel, channel_index=channel_index)
-            frame.bind_class(bind_tag, '<Double-Button-1>', handler)
+        label = tk.Label(frame, textvariable=var_channel['name'], fg=self.skin.fg_color,
+                         bg=self.skin.bg_color, anchor=tk.NW)
+        label.pack(side=tk.LEFT, pady=2, padx=3)
+        label.bindtags((bind_tag,) + label.bindtags())
+        frame.label = label
+        self.wrap_frame.bind_scroll_wheel(frame.label)
 
-        for channel_index, var_channel in enumerate(self.var_channels):
-            add_channel_entry(channel_index, var_channel)
+        handler = event_handler.TkEventHandler(self.channel_onselect, var_channel_name=var_channel['name'])
+        frame.bind_class(bind_tag, '<Button-1>', handler)
+        handler = event_handler.TkEventHandler(self.init_rename_channel, channel_index=channel_index)
+        frame.bind_class(bind_tag, '<Double-Button-1>', handler)
+
+    def remove_channel(self, index):
+        for var in self.var_channels[index].values():
+            for trace_info in var.trace_vinfo():
+                var.trace_vdelete(*trace_info)
+        del self.var_channels[index]
+
+        frame = self.item_frames[index]
+        self.wrap_frame.unbind_scroll_wheel(frame)
+        self.wrap_frame.unbind_scroll_wheel(frame.checkbox)
+        self.wrap_frame.unbind_scroll_wheel(frame.label)
+        self.wrap_frame.unbind_scroll_wheel(self.color_previews[index])
+
+        ## This has to go before unbind_class (or should be removed)
+        ## since unbind_class implicitly also unbinds this event
+        self.color_previews[index].unbind('<Double-Button-1>', self.color_previews[index].ondblclick)
+
+        frame.unbind_class(frame.bind_tag, '<Button-1>')
+        frame.unbind_class(frame.bind_tag, '<Double-Button-1>')
+        frame.destroy()
+        del self.item_frames[index]
+        del self.color_previews[index]
 
     def update_vars(self, channel_props):
         for channel_property, var_channel in zip(channel_props, self.var_channels):

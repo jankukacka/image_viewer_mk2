@@ -29,25 +29,53 @@ class PanelPipelines(object):
 
         self.accordions = []
 
-    def recreate_items(self, channel_props):
-        while len(self.accordions) > 0:
-            self.accordions[-1].destroy()
-            self.accordions[-1].pp_observer_target.detach(self.accordions[-1].pp_observer)
-            del self.accordions[-1]
+    @event_handler.requires('event')
+    def on_channels_updated(self, event):
+        if event.action == 'itemsAdded':
+            for i,item in enumerate(event.items):
+                self.add_item(channel_prop=item, channel_index=event.index+i)
+        elif event.action == 'itemsRemoved':
+            for item in event.items:
+                self.remove_item(event.index)
 
-        for channel_prop in channel_props:
-            accordion = sortable_accordion.SortableAccordion(self.parent, self.skin)
+    def add_item(self, channel_prop, channel_index):
+        accordion = sortable_accordion.SortableAccordion(self.parent, self.skin)
 
-            for filter in channel_prop['pipeline']['filters']:
-                self.create_widget(accordion, filter)
+        for filter in channel_prop['pipeline']['filters']:
+            self.create_widget(accordion, filter)
 
-            accordion.pp_observer = event_handler.ObservableEventHandler(self.on_sourceupdatded, accordion=accordion)
-            accordion.pp_observer_target = channel_prop['pipeline']['filters']
-            channel_prop['pipeline']['filters'].attach(accordion.pp_observer)
+        accordion.pp_observer = event_handler.ObservableEventHandler(self.on_sourceupdatded, accordion=accordion)
+        accordion.pp_observer_target = channel_prop['pipeline']['filters']
+        channel_prop['pipeline']['filters'].attach(accordion.pp_observer)
 
-            handler = event_handler.ObservableEventHandler(self.update_source, source_list=channel_prop['pipeline']['filters'])
-            accordion.items.attach(handler)
-            self.accordions.append(accordion)
+        handler = event_handler.ObservableEventHandler(self.update_source, source_list=channel_prop['pipeline']['filters'])
+        accordion.items.attach(handler)
+        self.accordions.insert(channel_index, accordion)
+
+    def remove_item(self, index):
+        self.accordions[index].destroy()
+        self.accordions[index].pp_observer_target.detach(self.accordions[index].pp_observer)
+        del self.accordions[index]
+
+    # def recreate_items(self, channel_props):
+    #     while len(self.accordions) > 0:
+    #         self.accordions[-1].destroy()
+    #         self.accordions[-1].pp_observer_target.detach(self.accordions[-1].pp_observer)
+    #         del self.accordions[-1]
+    #
+    #     for channel_prop in channel_props:
+    #         accordion = sortable_accordion.SortableAccordion(self.parent, self.skin)
+    #
+    #         for filter in channel_prop['pipeline']['filters']:
+    #             self.create_widget(accordion, filter)
+    #
+    #         accordion.pp_observer = event_handler.ObservableEventHandler(self.on_sourceupdatded, accordion=accordion)
+    #         accordion.pp_observer_target = channel_prop['pipeline']['filters']
+    #         channel_prop['pipeline']['filters'].attach(accordion.pp_observer)
+    #
+    #         handler = event_handler.ObservableEventHandler(self.update_source, source_list=channel_prop['pipeline']['filters'])
+    #         accordion.items.attach(handler)
+    #         self.accordions.append(accordion)
 
     def create_widget(self, accordion, filter, index=None):
         T_widget = filter_config.get_filter_widget(filter['name'])
