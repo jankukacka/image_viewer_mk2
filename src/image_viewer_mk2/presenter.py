@@ -154,6 +154,8 @@ class Presenter(object):
         model_dict = self.model.save()
         filename = self.view.asksaveasfilename(title='Save config as...', filetypes=[('JSON files', '.json')], initialfile='config.json')
         try:
+            if not filename.lower().endswith('.json'):
+                filename += '.json'
             hp.io.save(filename, model_dict, overwrite=True)
         except Exception as e:
             print('Error saving model as', filename)
