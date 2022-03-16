@@ -121,7 +121,8 @@ class ChannelsList(Observable):
                                          onvalue=True, offvalue=False)
         frame.checkbox.pack(side=tk.LEFT, expand=False, pady=2, padx=3)
         self.wrap_frame.bind_scroll_wheel(frame.checkbox)
-        frame.checkbox.bindtags((bind_tag,) + frame.checkbox.bindtags())
+        ## NOTE: Toggling visibility should not change active channel
+        # frame.checkbox.bindtags((bind_tag,) + frame.checkbox.bindtags())
 
         color_preview = tk.Frame(frame, width=16, height=16, bg=var_channel['color'].get(), highlightthickness=1, highlightbackground='#000000')
         color_preview.ondblclick = color_preview.bind('<Double-Button-1>', event_handler.TkEventHandler(self.color_preview_onclick, var=var_channel['color']))
