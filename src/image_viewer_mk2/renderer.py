@@ -13,6 +13,7 @@ from PIL import Image
 from time import time
 from queue import Empty
 from functools import reduce
+from skimage.transform import resize
 from multiprocessing import Process, Queue
 from matplotlib.colors import PowerNorm
 
@@ -129,11 +130,12 @@ def render(rendering_queue, rendered_queue, use_gpu, debug, drop_tasks=True):
 
 
 def render_response(input_image, output_image, cmap):
-    from skimage.transform import resize
     response = np.empty((128,256,4))
     response[:] = cmap(np.linspace(0,1,response.shape[0]))[:,None]
-    hist = np.histogram2d(output_image.ravel(), input_image.ravel(), bins=(np.linspace(0,1,64),np.linspace(0,1,128)))[0]
-    hist = np.log(hist)
+    hist = np.histogram2d(output_image.ravel(), input_image.ravel(),
+                          bins=(np.linspace(0,1,64),np.linspace(0,1,128)))[0]
+    with np.seterr(all='ignore'):
+        hist = np.log(hist)
     hist = np.nan_to_num(0.5 + 0.5*(hist / hist.max()), neginf=0)
     response[...,-1] = resize(hist, response.shape[:2], preserve_range=True)
     response = (255*response).astype(np.uint8)[::-1]
