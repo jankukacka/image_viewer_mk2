@@ -134,7 +134,7 @@ def render_response(input_image, output_image, cmap):
     response[:] = cmap(np.linspace(0,1,response.shape[0]))[:,None]
     hist = np.histogram2d(output_image.ravel(), input_image.ravel(),
                           bins=(np.linspace(0,1,64),np.linspace(0,1,128)))[0]
-    with np.seterr(all='ignore'):
+    with np.errstate(all='ignore'):
         hist = np.log(hist)
     hist = np.nan_to_num(0.5 + 0.5*(hist / hist.max()), neginf=0)
     response[...,-1] = resize(hist, response.shape[:2], preserve_range=True)
