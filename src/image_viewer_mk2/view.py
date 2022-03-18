@@ -93,7 +93,7 @@ class View(tk.Tk):
         self.setup_image_axis()
         self.setup_response_panel()
         self.setup_channels_panel()
-        self.setup_channels2_panel()
+        self.setup_channels_list()
         self.setup_model_io()
 
         self.loader = LoaderAnimation((self.figure_canvas.winfo_width()/2, 1), self.skin.bg_color, self.figure_canvas, self)
@@ -166,24 +166,22 @@ class View(tk.Tk):
         self.figure_canvas.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
     def setup_channels_panel(self):
-        self.property_frames = {}
-        # self.channel_figures = [None,None]
-
         self.var_channel = {
             'color': StringVar(value='#000000'),
+            ## NOTE: can be probably removed:
             'visible': BooleanVar(value=True)
         }
 
-        channel_frame = ttk.LabelFrame(self.grid_frames[2], text='Channel settings', padding=5)
-        channel_frame.pack(side=tk.TOP, expand=False, fill=tk.BOTH, padx=5, pady=5)
+        self.channel_frame = ttk.LabelFrame(self.grid_frames[2], text='Channel settings', padding=5)
+        self.channel_frame.pack(side=tk.TOP, expand=False, fill=tk.BOTH, padx=5, pady=5)
 
         self.var_selected_channel = StringVar(value='Channel 0')
-        self.channel_combo = ttk.Combobox(channel_frame, state='readonly',
+        self.channel_combo = ttk.Combobox(self.channel_frame, state='readonly',
                              textvariable=self.var_selected_channel)
         self.channel_combo.pack(side=tk.TOP, expand=False, fill=tk.X)
 
 
-        color_frame = tk.Frame(channel_frame, bg=self.skin.bg_color)
+        color_frame = tk.Frame(self.channel_frame, bg=self.skin.bg_color)
         color_frame.pack(side=tk.TOP, expand=True, fill=tk.BOTH, padx=0, pady=5)
 
         grid = tk.Frame(color_frame, bg=self.skin.bg_color)
@@ -208,9 +206,9 @@ class View(tk.Tk):
         self.btn_copy.image = icon
         self.btn_copy.pack(side=tk.RIGHT, padx=3)
 
-        self.pipelines_panel = PanelPipelines(channel_frame, self.skin, self.var_selected_channel)
+        self.pipelines_panel = PanelPipelines(self.channel_frame, self.skin, self.var_selected_channel)
 
-        self.btn_add_filter = ttk.Button(channel_frame, text='Add filter', command=self.show_filter_menu)
+        self.btn_add_filter = ttk.Button(self.channel_frame, text='Add filter', command=self.show_filter_menu)
         self.btn_add_filter.pack(side=tk.BOTTOM)
         self.menu_add_filter = {'obj': tk.Menu(self)}
         for T_filter in get_available_filters():
@@ -219,8 +217,9 @@ class View(tk.Tk):
                 self.menu_add_filter['obj'].add_command(label=T_widget.title)
                 self.menu_add_filter[T_filter.name] = T_widget.title
 
+        set_state(self.channel_frame, 'disable')
 
-    def setup_channels2_panel(self):
+    def setup_channels_list(self):
         self.channels_panel = ChannelsList(self.grid_frames[1],self.skin, self.var_selected_channel)
 
 
@@ -264,10 +263,8 @@ class View(tk.Tk):
         else:
             image = self.image
         self.render_ref = ImageTk.PhotoImage(image)
-        # self.figure_canvas.update()
         canvas_width = self.figure_canvas.winfo_width()
         canvas_height = self.figure_canvas.winfo_height()
-        # print(canvas_width, canvas_height)
         self.figure_canvas.create_image((canvas_width/2+self.offset[0],canvas_height/2+self.offset[1]), image=self.render_ref)
 
     def show_response(self, response_image):
@@ -285,6 +282,12 @@ class View(tk.Tk):
 
     def update_channels(self, channel_props):
         self.channel_combo.configure(values=[cp['name'] for cp in channel_props])
+        if len(channel_props) > 0:
+            set_state(self.channel_frame, 'normal')
+        else:
+            set_state(self.channel_frame, 'disable')
+
+
 
     def get_active_channel(self):
         channel_names = [vc['name'].get() for vc in self.channels_panel.var_channels]

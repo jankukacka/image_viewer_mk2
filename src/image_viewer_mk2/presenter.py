@@ -93,13 +93,17 @@ class Presenter(object):
 
         ## Attach model callbacks
         self.model.channel_props.attach(event_handler.ObservableEventHandler(
-            self.view.channels_panel.on_channels_updated,
-            filter_={'action':['itemsAdded', 'itemsRemoved']}))
-        self.model.channel_props.attach(event_handler.ObservableEventHandler(
             self.view.pipelines_panel.on_channels_updated,
             filter_={'action':['itemsAdded', 'itemsRemoved']}))
         self.model.channel_props.attach(event_handler.ObservableEventHandler(
+            self.view.channels_panel.on_channels_updated,
+            filter_={'action':['itemsAdded', 'itemsRemoved']}))
+        self.model.channel_props.attach(event_handler.ObservableEventHandler(
             self.view.update_channels, channel_props=self.model.channel_props,
+            filter_={'action':['itemsAdded', 'itemsRemoved']}))
+
+        self.model.channel_props.attach(event_handler.ObservableEventHandler(
+            self.channel_onchange,
             filter_={'action':['itemsAdded', 'itemsRemoved']}))
 
         self.model.attach(event_handler.ObservableEventHandler(
@@ -145,9 +149,10 @@ class Presenter(object):
         ## TODO: This could probably be simplified and made more efficient
         self.view.channels_panel.update_vars(self.model.channel_props)
         ## TODO: This could be bound to itemsRemoved only
-        active_channel = self.view.get_active_channel()
-        if active_channel < len(self.model.channel_props):
-            self.channel_onchange()
+        # active_channel = self.view.get_active_channel()
+        # if active_channel < len(self.model.channel_props):
+        #     self.channel_onchange()
+
 
 
     def save_model(self):
@@ -214,8 +219,8 @@ class Presenter(object):
         for key, val in channel_property.items():
             if key in self.view.var_channel:
                 self.view.var_channel[key].set(val)
-            if key in self.view.property_frames:
-                view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
+            # if key in self.view.property_frames:
+            #     view_.set_state(self.view.property_frames[key], 'normal' if val else 'disable')
 
         self.view.channels_panel.highlight_item(channel_index)
         self.view.pipelines_panel.on_channel_selected_change(channel_index)
